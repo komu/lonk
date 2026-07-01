@@ -1,0 +1,41 @@
+product: jvm/lib
+description: A simple database library for non-blocking Kotlin
+
+settings:
+  jvm:
+    jdk:
+      version: 21
+  kotlin:
+    version: 2.4.0
+    freeCompilerArgs:
+      - -Xreturn-value-checker=full
+      - -Xexplicit-api=strict
+  publishing:
+    enabled: true
+    group: dev.komu.lonk
+    artifactId: lonk
+    version: 0.0.0-SNAPSHOT
+    mavenCentral:
+      enabled: true
+      publishingMode: auto
+    signArtifacts: true
+    publishSources: true
+    pom:
+      url: https://github.com/EvidentSolutions/lonk
+      scm: https://github.com/EvidentSolutions/lonk.git
+      developers:
+        - name: Juha Komulainen
+      licenses:
+        - name: MIT
+          url: https://opensource.org/license/mit
+
+dependencies:
+  - $kotlin.reflect
+  - $libs.kotlinx.coroutines
+  - $libs.jdbc.postgresql: compile-only
+  - $libs.jetbrains.annotations: compile-only
+
+test-dependencies:
+  - $libs.jdbc.hsqldb
+  - $libs.jdbc.postgresql
+  - $libs.testcontainers.postgresql

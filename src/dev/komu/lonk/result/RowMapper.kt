@@ -13,47 +13,60 @@ public fun interface RowMapper<T> {
      * The implementation should not call [ResultSet.next] or other methods to move
      * the current position of the [ResultSet], caller is responsible for that.
      */
-    public fun mapRow(resultSet: ResultSet): T?
+    public fun mapRow(resultSet: ResultRow): T?
 
     /**
-     * Creates a [ResultSetProcessor] that applies this row-mapper to every row
+     * Creates a [ResultAggregator] that applies this row-mapper to every row
      * and results a list.
      */
-    public fun list(): ResultSetProcessor<List<T>> {
-        return ResultSetProcessor { resultSet ->
-            val result = mutableListOf<T>()
-            while (resultSet.next())
-                result.add(mapRow(resultSet) as T)
-            result
-        }
-    }
+    public fun list(): ResultAggregator<List<T>> {
+        return object : ResultAggregator<List<T>> {
+            private val result = mutableListOf<T>()
 
-    /**
-     * Creates a [ResultSetProcessor] that expects a single result row from database.
-     */
-    public fun unique(): ResultSetProcessor<T> {
-        return ResultSetProcessor { resultSet ->
-            if (!resultSet.next()) throw EmptyResultException()
-            val result = mapRow(resultSet)
-
-            if (resultSet.next()) throw NonUniqueResultException()
-            result as T
-        }
-    }
-
-    /**
-     * Creates a [ResultSetProcessor] that expects zero or one result row from the database.
-     */
-    public fun optional(): ResultSetProcessor<T?> {
-        return ResultSetProcessor { resultSet ->
-            if (!resultSet.next()) {
-                null
-            } else {
-                val result = mapRow(resultSet)
-
-                if (resultSet.next()) throw NonUniqueResultException()
-                result
+            override fun process(row: ResultRow) {
+                result.add(mapRow(row) as T)
             }
+
+            override fun build() =
+                result
+        }
+    }
+
+    /**
+     * Creates a [ResultAggregator] that expects a single result row from database.
+     */
+    public fun unique(): ResultAggregator<T> {
+        return object : ResultAggregator<T> {
+            private var result: T? = null
+            private var got: Boolean = false
+
+            override fun process(row: ResultRow) {
+                if (got) throw NonUniqueResultException()
+                result = mapRow(row) as T
+                got = true
+            }
+
+            @Suppress("UNCHECKED_CAST")
+            override fun build() = if (got) result as T else throw EmptyResultException()
+        }
+    }
+
+    /**
+     * Creates a [ResultAggregator] that expects zero or one result rows from the database.
+     */
+    public fun optional(): ResultAggregator<T?> {
+        return object : ResultAggregator<T?> {
+            private var result: T? = null
+            private var got: Boolean = false
+
+            override fun process(row: ResultRow) {
+                if (got) throw NonUniqueResultException()
+                result = mapRow(row) as T
+                got = true
+            }
+
+            @Suppress("UNCHECKED_CAST")
+            override fun build() = result
         }
     }
 }

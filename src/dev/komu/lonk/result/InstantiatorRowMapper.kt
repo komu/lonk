@@ -1,11 +1,9 @@
 package dev.komu.lonk.result
 
-import dev.komu.lonk.adapter.jdbc.getTypes
 import dev.komu.lonk.instantiation.Instantiator
 import dev.komu.lonk.instantiation.InstantiatorArguments
 import dev.komu.lonk.instantiation.InstantiatorProvider
 import dev.komu.lonk.instantiation.NamedTypeList
-import java.sql.ResultSet
 import kotlin.reflect.KClass
 import kotlin.reflect.jvm.jvmName
 
@@ -24,16 +22,16 @@ internal class InstantiatorRowMapper<T : Any>(
 
     private var instantiatorArguments: InstantiatorArguments? = null
 
-    override fun mapRow(resultSet: ResultSet): T {
+    override fun mapRow(resultSet: ResultRow): T {
         if (types == null) {
-            types = resultSet.metaData.getTypes()
+            types = resultSet.getTypes()
             ctor = instantiatorProvider.findInstantiator(cl, types!!)
             arguments = arrayOfNulls(types!!.size)
             instantiatorArguments = InstantiatorArguments(types!!, arguments!!)
         }
 
         for (i in arguments!!.indices)
-            arguments!![i] = resultSet.getObject(i + 1)
+            arguments!![i] = resultSet[i]
 
         val value = ctor!!.instantiate(instantiatorArguments!!)
         if (value != null)
@@ -59,16 +57,16 @@ internal class NullableInstantiatorRowMapper<T : Any>(
 
     private var instantiatorArguments: InstantiatorArguments? = null
 
-    override fun mapRow(resultSet: ResultSet): T? {
+    override fun mapRow(resultSet: ResultRow): T? {
         if (types == null) {
-            types = resultSet.metaData.getTypes()
+            types = resultSet.getTypes()
             ctor = instantiatorProvider.findInstantiator(cl, types!!)
             arguments = arrayOfNulls(types!!.size)
             instantiatorArguments = InstantiatorArguments(types!!, arguments!!)
         }
 
         for (i in arguments!!.indices)
-            arguments!![i] = resultSet.getObject(i + 1)
+            arguments!![i] = resultSet[i]
 
         return ctor!!.instantiate(instantiatorArguments!!)
     }

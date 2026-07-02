@@ -1,9 +1,6 @@
 package dev.komu.lonk
 
-import dev.komu.lonk.result.EmptyResultException
-import dev.komu.lonk.result.NonUniqueResultException
-import dev.komu.lonk.result.ResultSetProcessor
-import dev.komu.lonk.result.RowMapper
+import dev.komu.lonk.result.*
 import dev.komu.lonk.testutils.DatabaseProvider.POSTGRESQL
 import dev.komu.lonk.testutils.DatabaseTest
 import dev.komu.lonk.testutils.transactionalTest
@@ -98,7 +95,7 @@ internal class DatabaseTest(private val db: DatabaseSource) {
     @Test
     fun rowMapper() = transactionalTest(db) { db ->
         val squaringRowMapper = RowMapper { resultSet ->
-            val value = resultSet.getInt(1)
+            val value = resultSet.get<Int>(0)
             value * value
         }
 
@@ -109,10 +106,13 @@ internal class DatabaseTest(private val db: DatabaseSource) {
 
     @Test
     fun `custom result processor`() = transactionalTest(db) { db ->
-        val rowCounter = ResultSetProcessor { resultSet ->
-            var rows = 0
-            while (resultSet.next()) rows++
-            rows
+        val rowCounter = object : ResultAggregator<Int> {
+            private var rows = 0
+            override fun process(row: ResultRow) {
+                rows++
+            }
+
+            override fun build() = rows
         }
 
         assertEquals(3, db.executeQuery(rowCounter, "values (1), (2), (3)"))

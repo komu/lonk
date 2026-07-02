@@ -2,7 +2,7 @@ package dev.komu.lonk.adapter.jdbc
 
 import dev.komu.lonk.SqlQuery
 import dev.komu.lonk.adapter.ConnectionAdapter
-import dev.komu.lonk.result.ResultSetProcessor
+import dev.komu.lonk.result.ResultAggregator
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import java.sql.Connection
@@ -38,15 +38,18 @@ internal class JdbcConnectionAdapter(
         }
     }
 
-    override suspend fun <T> executeQuery(c: Connection, processor: ResultSetProcessor<T>, query: SqlQuery): T =
+    override suspend fun <T> executeQuery(c: Connection, processor: ResultAggregator<T>, query: SqlQuery): T =
         withContext(dispatcher) {
             @Suppress("SqlSourceToSinkFlow")
             c.prepareStatement(query.sql).use { ps ->
                 ps.bindFrom(query)
 
-                ps.executeQuery().use { resultSet ->
-                    processor.process(resultSet)
+                ps.executeQuery().use { rs ->
+                    while (rs.next())
+                        processor.process(JdbcResultRow(rs))
                 }
+
+                processor.build()
             }
         }
 

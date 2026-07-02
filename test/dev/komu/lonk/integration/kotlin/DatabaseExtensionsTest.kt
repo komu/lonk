@@ -1,6 +1,9 @@
 package dev.komu.lonk.integration.kotlin
 
 import dev.komu.lonk.DatabaseSource
+import dev.komu.lonk.result.ResultAggregator
+import dev.komu.lonk.result.ResultRow
+import dev.komu.lonk.result.get
 import dev.komu.lonk.testutils.DatabaseProvider
 import dev.komu.lonk.testutils.DatabaseTest
 import dev.komu.lonk.testutils.transactionalTest
@@ -22,7 +25,7 @@ internal class DatabaseExtensionsTest(private val db: DatabaseSource) {
     @Test
     fun `findAll customMapper`() = transactionalTest(db) { db ->
         val result = db.findAll("select * from (values (1, 'foo'), (2, 'bar')) d") { rs ->
-            rs.getInt(1) to rs.getString(2).reversed()
+            rs.get<Int>(0) to rs.get<String>(1).reversed()
         }
 
         assertEquals(listOf(1 to "oof", 2 to "rab"), result)
@@ -36,7 +39,7 @@ internal class DatabaseExtensionsTest(private val db: DatabaseSource) {
     @Test
     fun `findUnique customMapper`() = transactionalTest(db) { db ->
         val result = db.findUnique("select * from (values (1, 'foo')) d") { rs ->
-            rs.getInt(1) to rs.getString(2).reversed()
+            rs.get<Int>(0) to rs.get<String>(1).reversed()
         }
 
         assertEquals(1 to "oof", result)
@@ -55,7 +58,7 @@ internal class DatabaseExtensionsTest(private val db: DatabaseSource) {
     @Test
     fun `findUniqueOrNull customMapper`() = transactionalTest(db) { db ->
         val result = db.findNullableUnique("select * from (values (1, 'foo')) d") { rs ->
-            rs.getInt(1) to rs.getString(2).reversed()
+            rs.get<Int>(0) to rs.get<String>(1).reversed()
         }
 
         assertEquals(1 to "oof", result)
@@ -63,16 +66,20 @@ internal class DatabaseExtensionsTest(private val db: DatabaseSource) {
 
     @Test
     fun executeQuery() = transactionalTest(db) { db ->
-        val result = db.executeQuery("select * from (values (1, 'foo'), (2, 'bar')) d") { rs ->
-            val ints = mutableListOf<Int>()
-            val strs = mutableListOf<String>()
-            while (rs.next()) {
-                ints += rs.getInt(1)
-                strs += rs.getString(2)
+        val processor = object : ResultAggregator<Pair<List<Int>, List<String>>> {
+            private val ints = mutableListOf<Int>()
+            private val strs = mutableListOf<String>()
+
+            override fun process(row: ResultRow) {
+                ints += row.get<Int>(0)
+                strs += row.get<String>(1)
+
             }
 
-            ints to strs
+            override fun build() = ints to strs
         }
+
+        val result = db.executeQuery(processor, "select * from (values (1, 'foo'), (2, 'bar')) d")
 
         assertEquals(listOf(1, 2) to listOf("foo", "bar"), result)
     }

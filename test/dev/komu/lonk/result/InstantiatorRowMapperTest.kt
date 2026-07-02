@@ -2,11 +2,7 @@ package dev.komu.lonk.result
 
 import dev.komu.lonk.conversion.DefaultTypeConversionRegistry
 import dev.komu.lonk.instantiation.InstantiatorProvider
-import dev.komu.lonk.testutils.unimplemented
-import java.sql.ResultSet
-import java.sql.ResultSetMetaData
 import kotlin.reflect.KClass
-import kotlin.reflect.jvm.jvmName
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -18,9 +14,9 @@ internal class InstantiatorRowMapperTest {
     fun `instantiating with simple constructor`() {
         val mapper = InstantiatorRowMapper(SingleConstructor::class, instantiatorRegistry).list()
 
-        val resultSet = resultSet(listOf(listOf(1, "foo"), listOf(3, "bar")))
-
-        val list = mapper.process(resultSet)
+        mapper.process(MockResultRow(1, "foo"))
+        mapper.process(MockResultRow(3, "bar"))
+        val list = mapper.build()
         assertEquals(2, list.size)
 
         assertEquals(1, list[0].num)
@@ -33,16 +29,15 @@ internal class InstantiatorRowMapperTest {
     fun `empty result set produces no results`() {
         val mapper = InstantiatorRowMapper(SingleConstructor::class, instantiatorRegistry).list()
 
-        val metadata = metadataFromTypes(arrayOf<KClass<*>>(Int::class, String::class).asList())
-
-        assertEquals(emptyList(), mapper.process(resultSet(emptyList(), metadata)))
+        assertEquals(emptyList(), mapper.build())
     }
 
     @Test
     fun `correct constructor is picked based on types`() {
         val mapper = InstantiatorRowMapper(TwoConstructors::class, instantiatorRegistry).list()
 
-        val list = mapper.process(resultSet(listOf(listOf(1, "foo"))))
+        mapper.process(MockResultRow(1, "foo"))
+        val list = mapper.build()
         assertEquals(1, list.size)
 
         assertEquals(1, list[0].num)
@@ -59,28 +54,19 @@ internal class InstantiatorRowMapperTest {
         )
     }
 
-    private fun resultSet(
-        rows: List<List<Any>>,
-        metadata: ResultSetMetaData = metadataFromTypes(rows.first().map { it::class })
-    ) = object : ResultSet by unimplemented() {
-        var index = -1
+    private class MockResultRow(private val values: List<Any>) : ResultRow {
 
-        override fun getMetaData() = metadata
-        override fun next(): Boolean {
-            if (index + 1 == rows.size)
-                return false
+        constructor(vararg values: Any) : this(values.asList())
 
-            index++
-            return true
-        }
+        override val columnCount: Int
+            get() = values.size
 
-        override fun getObject(columnIndex: Int): Any = rows[index][columnIndex - 1]
+        override fun getColumnLabel(index: Int): String =
+            "column $index"
+
+        override fun getColumnClass(index: Int): KClass<*> =
+            values[index]::class
+
+        override fun get(index: Int) = values[index]
     }
-
-    private fun metadataFromTypes(types: List<KClass<*>>): ResultSetMetaData =
-        object : ResultSetMetaData by unimplemented() {
-            override fun getColumnCount() = types.size
-            override fun getColumnLabel(column: Int) = "column ${column - 1}"
-            override fun getColumnClassName(column: Int) = types[column - 1].jvmName
-        }
 }

@@ -2,7 +2,7 @@ package dev.komu.lonk
 
 import dev.komu.lonk.adapter.ConnectionAdapter
 import dev.komu.lonk.instantiation.InstantiatorProvider
-import dev.komu.lonk.result.ResultSetProcessor
+import dev.komu.lonk.result.ResultAggregator
 import java.sql.SQLException
 
 public class DefaultDatabaseConnection<C> internal constructor(
@@ -12,10 +12,10 @@ public class DefaultDatabaseConnection<C> internal constructor(
 ) : DatabaseConnection(instantiatorRegistry) {
 
     /**
-     * Executes a query and processes the results with given [dev.komu.lonk.result.ResultSetProcessor].
+     * Executes a query and processes the results with given [dev.komu.lonk.result.ResultAggregator].
      * All other findXXX-methods are just convenience methods for this one.
      */
-    override suspend fun <T> executeQuery(processor: ResultSetProcessor<T>, query: SqlQuery): T =
+    override suspend fun <T> executeQuery(processor: ResultAggregator<T>, query: SqlQuery): T =
         connectionAdapter.executeQuery(connection, processor, query.toDatabase())
 
     @IgnorableReturnValue

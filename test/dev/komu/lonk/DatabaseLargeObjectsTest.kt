@@ -8,7 +8,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 @DatabaseTest(POSTGRESQL)
-internal class DatabaseLargeObjectsTest(private val db: DatabaseSource) {
+internal class DatabaseLargeObjectsTest(private val db: DbConnectionProvider) {
 
     @Test
     fun `clob columns can be coerced to strings`() = transactionalTest(db) { db ->

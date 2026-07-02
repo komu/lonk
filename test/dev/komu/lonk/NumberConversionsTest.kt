@@ -11,7 +11,7 @@ import java.net.URL
 import kotlin.test.Test
 
 @DatabaseTest(POSTGRESQL)
-internal class NumberConversionsTest(private val db: DatabaseSource) {
+internal class NumberConversionsTest(private val db: DbConnectionProvider) {
 
     @Test
     fun `short conversions`() = transactionalTest(db) { db ->

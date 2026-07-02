@@ -6,9 +6,18 @@ import org.intellij.lang.annotations.Language
 import kotlin.reflect.KClass
 import kotlin.time.Duration
 
-public abstract class DatabaseConnection internal constructor(
-    private val instantiatorRegistry: InstantiatorProvider,
+public abstract class DbConnection internal constructor(
+    private val instantiatorProvider: InstantiatorProvider,
 ) {
+
+    internal abstract suspend fun <T> doExecuteQuery(processor: ResultAggregator<T>, query: DatabaseQuery): T
+    internal abstract suspend fun doUpdate(query: DatabaseQuery): Long
+
+    public abstract suspend fun commit()
+    public abstract suspend fun rollback()
+
+    /** Close this connection */
+    public abstract suspend fun close()
 
     /**
      * default timeout set on all statements
@@ -19,15 +28,11 @@ public abstract class DatabaseConnection internal constructor(
             field = value
         }
 
+    public suspend fun <T> executeQuery(processor: ResultAggregator<T>, query: SqlQuery): T =
+        doExecuteQuery(processor, query.toDatabase())
+
     public suspend fun <T : Any> executeQuery(query: SqlQuery, resultAggregator: ResultAggregator<T>): T =
         executeQuery(resultAggregator, query)
-
-    /**
-     * Executes a query and processes the results with given [ResultAggregator].
-     * All other findXXX-methods are just convenience methods for this one.
-     */
-    public abstract suspend fun <T> executeQuery(processor: ResultAggregator<T>, query: SqlQuery): T
-
     /**
      * Executes a query and processes the results with given [ResultAggregator].
      * 
@@ -198,13 +203,14 @@ public abstract class DatabaseConnection internal constructor(
      * Executes an update against the database and returns the number of affected rows.
      */
     @IgnorableReturnValue
-    public abstract suspend fun update(query: SqlQuery): Int
+    public suspend fun update(query: SqlQuery): Long =
+        doUpdate(query.toDatabase())
 
     /**
      * Executes an update against the database and returns the amount of affected rows.
      */
     @IgnorableReturnValue
-    public suspend fun update(@Language("SQL") sql: String, vararg args: Any?): Int =
+    public suspend fun update(@Language("SQL") sql: String, vararg args: Any?): Long =
         update(query(sql, *args))
 
     private fun <T : Any> resultProcessorForClass(cl: KClass<T>): ResultAggregator<List<T>> {
@@ -212,28 +218,16 @@ public abstract class DatabaseConnection internal constructor(
     }
 
     private fun <T : Any> rowMapperForClass(cl: KClass<T>): RowMapper<T> {
-        return InstantiatorRowMapper(cl, instantiatorRegistry)
+        return InstantiatorRowMapper(cl, instantiatorProvider)
     }
 
     private fun <T : Any> nullableRowMapperForClass(cl: KClass<T>): RowMapper<T?> {
-        return NullableInstantiatorRowMapper(cl, instantiatorRegistry)
+        return NullableInstantiatorRowMapper(cl, instantiatorProvider)
     }
 
-    public var isRollbackOnly: Boolean = false
-        private set
-
-    /**
-     * Marks the current transaction as rollback-only, indicating that the transaction
-     * should be rolled back rather than committed when it is finalized.
-     */
-    public fun setRollbackOnly() {
-        this.isRollbackOnly = true
-    }
-
-    /**
-     * Commits the pending transaction and closes the underlying JDBC connection.
-     *
-     * @throws DatabaseException if the commit, rollback, or close raises a SQL error
-     */
-    public abstract suspend fun close()
+    private fun SqlQuery.toDatabase() = DatabaseQuery(
+        sql = sql,
+        arguments = arguments.map { instantiatorProvider.valueToDatabase(it) },
+        timeout = timeout ?: defaultTimeout
+    )
 }

@@ -1,5 +1,6 @@
 package dev.komu.lonk
 
+import dev.komu.lonk.adapter.jdbc.JdbcConnectionProvider
 import dev.komu.lonk.conversion.registerEnum
 import dev.komu.lonk.testutils.DatabaseProvider.POSTGRESQL
 import dev.komu.lonk.testutils.DatabaseTest
@@ -13,7 +14,7 @@ internal class DatabaseEnumModeTest(private val ds: DataSource) {
 
     @Test
     fun `name enum mode`() {
-        val db = DatabaseSource(ds) {
+        val db = JdbcConnectionProvider(ds) {
             typeConversions.registerEnum(MyEnum::name)
         }
 
@@ -29,7 +30,7 @@ internal class DatabaseEnumModeTest(private val ds: DataSource) {
 
     @Test
     fun `ordinal enum mode`() {
-        val db = DatabaseSource(ds) {
+        val db = JdbcConnectionProvider(ds) {
             typeConversions.registerEnum(MyEnum::ordinal)
         }
 

@@ -3,12 +3,12 @@ package dev.komu.lonk
 import dev.komu.lonk.testutils.DatabaseProvider.POSTGRESQL
 import dev.komu.lonk.testutils.DatabaseTest
 import dev.komu.lonk.testutils.transactionalTest
-import java.time.Instant
+import java.time.LocalDateTime
 import kotlin.test.Test
 import kotlin.test.assertNull
 
 @DatabaseTest(POSTGRESQL)
-internal class DatabaseReflectiveInstantiationTest(private val db: DatabaseSource) {
+internal class DatabaseReflectiveInstantiationTest(private val db: DbConnectionProvider) {
 
     @Test
     fun `constructor binding with null values and conversions`() = transactionalTest(db) { db ->
@@ -16,5 +16,5 @@ internal class DatabaseReflectiveInstantiationTest(private val db: DatabaseSourc
         assertNull(result.dateTime)
     }
 
-    class ConstructorNeedingConversion(val dateTime: Instant?)
+    class ConstructorNeedingConversion(val dateTime: LocalDateTime?)
 }

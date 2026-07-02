@@ -1,6 +1,6 @@
 package dev.komu.lonk.integration.kotlin
 
-import dev.komu.lonk.DatabaseSource
+import dev.komu.lonk.DbConnectionProvider
 import dev.komu.lonk.result.ResultAggregator
 import dev.komu.lonk.result.ResultRow
 import dev.komu.lonk.result.get
@@ -12,7 +12,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 @DatabaseTest(DatabaseProvider.POSTGRESQL)
-internal class DatabaseExtensionsTest(private val db: DatabaseSource) {
+internal class DatabaseExtensionsTest(private val db: DbConnectionProvider) {
 
     @Test
     fun findAll() = transactionalTest(db) { db ->

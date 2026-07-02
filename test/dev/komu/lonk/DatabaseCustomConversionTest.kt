@@ -1,5 +1,6 @@
 package dev.komu.lonk
 
+import dev.komu.lonk.adapter.jdbc.JdbcConnectionProvider
 import dev.komu.lonk.conversion.registerConversionFromDatabase
 import dev.komu.lonk.conversion.registerConversionToDatabase
 import dev.komu.lonk.testutils.DatabaseProvider.POSTGRESQL
@@ -14,7 +15,7 @@ internal class DatabaseCustomConversionTest(private val ds: DataSource) {
 
     @Test
     fun `custom load conversions`() {
-        val db = DatabaseSource(ds) {
+        val db = JdbcConnectionProvider(ds) {
             typeConversions.registerConversionFromDatabase(EmailAddress::parse)
         }
 
@@ -28,7 +29,7 @@ internal class DatabaseCustomConversionTest(private val ds: DataSource) {
 
     @Test
     fun `custom save conversions`() {
-        val db = DatabaseSource(ds) {
+        val db = JdbcConnectionProvider(ds) {
             typeConversions.registerConversionToDatabase(EmailAddress::toString)
         }
 

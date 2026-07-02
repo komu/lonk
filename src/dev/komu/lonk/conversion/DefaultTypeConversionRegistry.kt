@@ -12,13 +12,6 @@ internal class DefaultTypeConversionRegistry : TypeConversionRegistry {
     private val loadConversions = ConversionMap()
     private val storeConversions = ConversionMap()
 
-    init {
-        NumberConversions.register(this)
-        JavaTimeConversions.register(this)
-        LobConversions.register(this)
-        // FIXME kotlinx-datetime?
-    }
-
     override fun <T : Enum<T>, K : Any> registerEnum(
         enumType: KClass<T>,
         keyType: KClass<K>,

@@ -1,10 +1,9 @@
 package dev.komu.lonk.integration.java8
 
-import dev.komu.lonk.DatabaseSource
+import dev.komu.lonk.DbConnectionProvider
 import dev.komu.lonk.testutils.DatabaseProvider
 import dev.komu.lonk.testutils.DatabaseTest
 import dev.komu.lonk.testutils.transactionalTest
-import dev.komu.lonk.testutils.withUTCTimeZone
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -14,7 +13,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 @DatabaseTest(DatabaseProvider.POSTGRESQL)
-internal class JavaTimeIntegrationTest(private val db: DatabaseSource) {
+internal class JavaTimeIntegrationTest(private val db: DbConnectionProvider) {
 
     @Test
     fun `fetch LocalDateTime`() = transactionalTest(db) { db ->
@@ -26,16 +25,17 @@ internal class JavaTimeIntegrationTest(private val db: DatabaseSource) {
 
     @Test
     fun `fetch Instant`() = transactionalTest(db) { db ->
-        withUTCTimeZone {
-            val time = Instant.ofEpochMilli(1295000000000L)
-            assertEquals(time, db.findUnique(Instant::class, "VALUES (cast('2011-01-14 10:13:20' AS TIMESTAMP))"))
-        }
+        val time = Instant.ofEpochMilli(1295000000000L)
+        assertEquals(
+            time,
+            db.findUnique(Instant::class, "VALUES (cast('2011-01-14 10:13:20+00' AS TIMESTAMP WITH TIME ZONE))")
+        )
     }
 
     @Test
     fun `store Instant`() = transactionalTest(db) { db ->
         db.update("DROP TABLE IF EXISTS instant_test")
-        db.update("CREATE TABLE instant_test (timestamp TIMESTAMP)")
+        db.update("CREATE TABLE instant_test (timestamp TIMESTAMP WITH TIME ZONE)")
 
         val instant = Instant.now().truncatedTo(ChronoUnit.MILLIS)
 
@@ -62,12 +62,10 @@ internal class JavaTimeIntegrationTest(private val db: DatabaseSource) {
 
     @Test
     fun `LocalDates with time-zone problems`() = transactionalTest(db) { db ->
-        withUTCTimeZone {
-            assertEquals(
-                LocalDate.of(2012, 10, 9),
-                db.findUnique(LocalDate::class, "VALUES (cast('2012-10-09' AS DATE))")
-            )
-        }
+        assertEquals(
+            LocalDate.of(2012, 10, 9),
+            db.findUnique(LocalDate::class, "VALUES (cast('2012-10-09' AS DATE))")
+        )
     }
 
     @Test

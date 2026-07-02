@@ -2,7 +2,7 @@
 
 package dev.komu.lonk.dialect
 
-import dev.komu.lonk.DatabaseSource
+import dev.komu.lonk.DbConnectionProvider
 import dev.komu.lonk.testutils.DatabaseProvider.POSTGRESQL
 import dev.komu.lonk.testutils.DatabaseTest
 import dev.komu.lonk.testutils.transactionalTest
@@ -11,7 +11,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 @DatabaseTest(POSTGRESQL)
-internal class PostgreSQLLargeObjectTest(private val db: DatabaseSource) {
+internal class PostgreSQLLargeObjectTest(private val db: DbConnectionProvider) {
 
     @Test
     fun `stream blob to database byte array`() = transactionalTest(db) { db ->

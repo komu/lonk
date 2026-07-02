@@ -10,8 +10,7 @@ import kotlin.reflect.jvm.jvmName
 internal class InstantiatorRowMapper<T : Any>(
     private val cl: KClass<T>,
     private val instantiatorProvider: InstantiatorProvider
-) :
-    RowMapper<T> {
+) : RowMapper<T> {
 
     private var types: NamedTypeList? = null
     private var ctor: Instantiator<T>? = null

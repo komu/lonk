@@ -1,6 +1,6 @@
 package dev.komu.lonk.adapter.jdbc
 
-import dev.komu.lonk.DatabaseException
+import dev.komu.lonk.LonkException
 import dev.komu.lonk.result.ResultRow
 import java.sql.ResultSet
 import kotlin.reflect.KClass
@@ -21,7 +21,7 @@ internal class JdbcResultRow(private val resultSet: ResultSet) : ResultRow {
         try {
             return Class.forName(className).kotlin
         } catch (e: ClassNotFoundException) {
-            throw DatabaseException("Could not find class '$className' specified by ResultSet.", e)
+            throw LonkException("Could not find class '$className' specified by ResultSet.", e)
         }
     }
 

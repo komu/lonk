@@ -37,6 +37,9 @@ internal class InstantiatorProvider(private val typeConversionRegistry: DefaultT
             val conversion = findConversionFromDbValue(types.getType(0), type)
             if (conversion != null)
                 return Instantiator { args -> conversion.convert(args.singleValue) } as Instantiator<T>
+
+            if (type.isValue)
+                return Instantiator { args -> args.singleValue } as Instantiator<T>
         }
 
         val instantiator = findExplicitInstantiatorFor(type, types)

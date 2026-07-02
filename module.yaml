@@ -5,6 +5,8 @@ settings:
   jvm:
     jdk:
       version: 21
+    test:
+      junitPlatformVersion: 6.1.1
   kotlin:
     version: 2.4.0
     freeCompilerArgs:
@@ -34,8 +36,13 @@ dependencies:
   - $libs.kotlinx.coroutines
   - $libs.jdbc.postgresql: compile-only
   - $libs.jetbrains.annotations: compile-only
+  - $libs.r2dbc.postgresql: compile-only
+  - $libs.kotlinx.coroutines.reactive
 
 test-dependencies:
+  - $libs.junit.jupiter.api
+  - $libs.junit.jupiter.params
   - $libs.jdbc.hsqldb
   - $libs.jdbc.postgresql
   - $libs.testcontainers.postgresql
+  - $libs.r2dbc.postgresql

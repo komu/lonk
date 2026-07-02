@@ -11,7 +11,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
 @DatabaseTest(POSTGRESQL)
-internal class DatabaseTest(private val db: DatabaseSource) {
+internal class DatabaseTest(private val db: DbConnectionProvider) {
 
     @Test
     fun `primitive queries`() = transactionalTest(db) { db ->

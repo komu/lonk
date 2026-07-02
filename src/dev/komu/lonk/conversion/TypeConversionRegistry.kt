@@ -7,6 +7,11 @@ import kotlin.reflect.KClass
  * to model values and vice versa.
  */
 public interface TypeConversionRegistry {
+
+    public fun register(conversions: TypeConversions) {
+        conversions.register(this)
+    }
+
     /**
      * Registers conversion from the given source database type to the given target model type.
      */

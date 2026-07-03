@@ -5,7 +5,6 @@ import dev.komu.lonk.DbConnection
 import dev.komu.lonk.instantiation.InstantiatorProvider
 import dev.komu.lonk.result.ResultAggregator
 import dev.komu.lonk.result.ResultRow
-import io.r2dbc.postgresql.api.PostgresqlConnection
 import io.r2dbc.spi.Connection
 import io.r2dbc.spi.Row
 import io.r2dbc.spi.RowMetadata
@@ -33,7 +32,7 @@ public class R2dbcConnection internal constructor(
         return result.rowsUpdated.cancelling(connection).awaitFirstOrNull() ?: 0
     }
 
-    override suspend fun <T> doExecuteQuery(processor: ResultAggregator<T>, query: DatabaseQuery): T {
+    override suspend fun <T> executeQuery(processor: ResultAggregator<T>, query: DatabaseQuery): T {
         val statement = connection.createStatement(query.translatedSql)
 
         statement.bindFrom(query)
@@ -81,13 +80,15 @@ public class R2dbcConnection internal constructor(
         }
 }
 
+// TODO: this causes race conditions in postgres driver
 private fun <T> Publisher<T>.cancelling(connection: Connection): Flux<T> =
-    Flux.from(this).doOnCancel {
+    Flux.from(this)
         // TODO this still requires PostgreSQL driver on classpath. modify the code so that it's not required
-        if (connection is PostgresqlConnection) {
-            connection.cancelRequest().subscribe(null) { }
-        }
-    }
+//     Flux.from(this).doOnCancel {
+//        if (connection is PostgresqlConnection) {
+//            connection.cancelRequest().subscribe(null) { }
+//        }
+//    }
 
 private fun Statement.bindFrom(query: DatabaseQuery) {
     for ((i, value) in query.arguments.withIndex())

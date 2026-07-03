@@ -20,16 +20,3 @@ public data class SqlQuery(
         return sb.toString()
     }
 }
-
-/**
- * Creates a new [SqlQuery] consisting of given SQL statement and arguments.
- * '?' characters act as placeholders for arguments in the query.
- */
-public fun query(@Language("SQL") sql: String, vararg args: Any?): SqlQuery =
-    SqlQuery(sql, args.asList())
-
-/**
- * @see .query
- */
-public fun query(@Language("SQL") sql: String, args: List<*>): SqlQuery =
-    SqlQuery(sql, args)

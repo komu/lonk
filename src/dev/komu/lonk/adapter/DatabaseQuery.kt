@@ -1,4 +1,4 @@
-package dev.komu.lonk
+package dev.komu.lonk.adapter
 
 internal class DatabaseQuery(
     val sql: String,

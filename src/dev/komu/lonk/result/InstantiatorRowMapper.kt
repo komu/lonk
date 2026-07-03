@@ -1,72 +1,39 @@
 package dev.komu.lonk.result
 
+import dev.komu.lonk.LonkException
 import dev.komu.lonk.instantiation.Instantiator
-import dev.komu.lonk.instantiation.InstantiatorArguments
 import dev.komu.lonk.instantiation.InstantiatorProvider
-import dev.komu.lonk.instantiation.NamedTypeList
 import kotlin.reflect.KClass
-import kotlin.reflect.jvm.jvmName
 
 internal class InstantiatorRowMapper<T : Any>(
     private val cl: KClass<T>,
     private val instantiatorProvider: InstantiatorProvider
-) : RowMapper<T> {
+) : ResultRowMapper<T> {
 
-    private var types: NamedTypeList? = null
-    private var ctor: Instantiator<T>? = null
+    private var instantiator: Instantiator<T>? = null
 
-    // For performance reasons we reuse the same arguments-array and InstantiatorArguments-object for all rows.
-    // This should be fine as long as the instantiators don't hang on to their arguments for too long.
-    private var arguments: Array<Any?>? = null
+    override fun invoke(row: ResultRow): T {
+        if (instantiator == null)
+            instantiator = instantiatorProvider.findInstantiator(cl, row.types)
 
-    private var instantiatorArguments: InstantiatorArguments? = null
-
-    override fun mapRow(resultSet: ResultRow): T {
-        if (types == null) {
-            types = resultSet.getTypes()
-            ctor = instantiatorProvider.findInstantiator(cl, types!!)
-            arguments = arrayOfNulls(types!!.size)
-            instantiatorArguments = InstantiatorArguments(types!!, arguments!!)
-        }
-
-        for (i in arguments!!.indices)
-            arguments!![i] = resultSet[i]
-
-        val value = ctor!!.instantiate(instantiatorArguments!!)
-        if (value != null)
-            return value
-        else
-            throw UnexpectedResultException("Expected ${cl.jvmName}, but got null")
+        return instantiator!!.instantiate(row.values)
     }
 }
 
-// FIXME
-internal class NullableInstantiatorRowMapper<T : Any>(
+internal class SingleNullableColumnInstantiatorRowMapper<T : Any>(
     private val cl: KClass<T>,
     private val instantiatorProvider: InstantiatorProvider
-) :
-    RowMapper<T?> {
+) : ResultRowMapper<T?> {
 
-    private var types: NamedTypeList? = null
-    private var ctor: Instantiator<T>? = null
+    private var instantiator: Instantiator<T>? = null
 
-    // For performance reasons we reuse the same arguments-array and InstantiatorArguments-object for all rows.
-    // This should be fine as long as the instantiators don't hang on to their arguments for too long.
-    private var arguments: Array<Any?>? = null
+    override fun invoke(row: ResultRow): T? {
+        if (row.columnCount != 1)
+            throw LonkException("Expected exactly one column, got ${row.columnCount}")
 
-    private var instantiatorArguments: InstantiatorArguments? = null
+        if (instantiator == null)
+            instantiator = instantiatorProvider.findInstantiator(cl, row.types)
 
-    override fun mapRow(resultSet: ResultRow): T? {
-        if (types == null) {
-            types = resultSet.getTypes()
-            ctor = instantiatorProvider.findInstantiator(cl, types!!)
-            arguments = arrayOfNulls(types!!.size)
-            instantiatorArguments = InstantiatorArguments(types!!, arguments!!)
-        }
-
-        for (i in arguments!!.indices)
-            arguments!![i] = resultSet[i]
-
-        return ctor!!.instantiate(instantiatorArguments!!)
+        return row[0]?.let { instantiator!!.instantiate(listOf(it)) }
     }
 }

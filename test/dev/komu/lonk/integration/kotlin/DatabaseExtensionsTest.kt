@@ -1,8 +1,8 @@
 package dev.komu.lonk.integration.kotlin
 
 import dev.komu.lonk.DbConnectionProvider
-import dev.komu.lonk.result.ResultAggregator
 import dev.komu.lonk.result.ResultRow
+import dev.komu.lonk.result.ResultRowCollector
 import dev.komu.lonk.result.get
 import dev.komu.lonk.testutils.DatabaseProvider
 import dev.komu.lonk.testutils.DatabaseTest
@@ -18,28 +18,19 @@ internal class DatabaseExtensionsTest(private val db: DbConnectionProvider) {
     fun findAll() = transactionalTest(db) { db ->
         assertEquals(
             listOf(Department(1, "foo"), Department(2, "bar")),
-            db.findAll<Department>("select * from (values (1, 'foo'), (2, 'bar')) d")
+            db.query("select * from (values (1, 'foo'), (2, 'bar')) d").findAll<Department>()
         )
     }
 
     @Test
-    fun `findAll customMapper`() = transactionalTest(db) { db ->
-        val result = db.findAll("select * from (values (1, 'foo'), (2, 'bar')) d") { rs ->
-            rs.get<Int>(0) to rs.get<String>(1).reversed()
-        }
-
-        assertEquals(listOf(1 to "oof", 2 to "rab"), result)
-    }
-
-    @Test
     fun findUnique() = transactionalTest(db) { db ->
-        assertEquals(Department(1, "foo"), db.findUnique<Department>("select * from (values (1, 'foo')) d"))
+        assertEquals(Department(1, "foo"), db.query("select * from (values (1, 'foo')) d").findUnique<Department>())
     }
 
     @Test
-    fun `findUnique customMapper`() = transactionalTest(db) { db ->
-        val result = db.findUnique("select * from (values (1, 'foo')) d") { rs ->
-            rs.get<Int>(0) to rs.get<String>(1).reversed()
+    fun `findUnique custom mapper`() = transactionalTest(db) { db ->
+        val result = db.query("select * from (values (1, 'foo')) d").findUnique { row ->
+            row.get<Int>(0) to row.get<String>(1).reversed()
         }
 
         assertEquals(1 to "oof", result)
@@ -47,39 +38,30 @@ internal class DatabaseExtensionsTest(private val db: DbConnectionProvider) {
 
     @Test
     fun `findUniqueOrNull existing`() = transactionalTest(db) { db ->
-        assertEquals(Department(1, "foo"), db.findNullableUnique<Department>("select * from (values (1, 'foo')) d"))
+        assertEquals(Department(1, "foo"), db.query("select * from (values (1, 'foo')) d").findUnique<Department>())
     }
 
     @Test
     fun `findUniqueOrNull nonexistent`() = transactionalTest(db) { db ->
-        assertNull(db.findUniqueOrNull<Department>("select * from (values (1, 'foo')) d where 1 = 2"))
-    }
-
-    @Test
-    fun `findUniqueOrNull customMapper`() = transactionalTest(db) { db ->
-        val result = db.findNullableUnique("select * from (values (1, 'foo')) d") { rs ->
-            rs.get<Int>(0) to rs.get<String>(1).reversed()
-        }
-
-        assertEquals(1 to "oof", result)
+        assertNull(db.query("select * from (values (1, 'foo')) d where 1 = 2").findOptional<Department>())
     }
 
     @Test
     fun executeQuery() = transactionalTest(db) { db ->
-        val processor = object : ResultAggregator<Pair<List<Int>, List<String>>> {
+        val processor = object : ResultRowCollector<Pair<List<Int>, List<String>>> {
             private val ints = mutableListOf<Int>()
             private val strs = mutableListOf<String>()
 
-            override fun process(row: ResultRow) {
+            override fun accumulate(row: ResultRow): Boolean {
                 ints += row.get<Int>(0)
                 strs += row.get<String>(1)
-
+                return true
             }
 
-            override fun build() = ints to strs
+            override fun finish() = ints to strs
         }
 
-        val result = db.executeQuery(processor, "select * from (values (1, 'foo'), (2, 'bar')) d")
+        val result = db.query("select * from (values (1, 'foo'), (2, 'bar')) d").collect(processor)
 
         assertEquals(listOf(1, 2) to listOf("foo", "bar"), result)
     }

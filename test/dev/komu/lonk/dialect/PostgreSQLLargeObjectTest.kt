@@ -21,7 +21,7 @@ internal class PostgreSQLLargeObjectTest(private val db: DbConnectionProvider) {
         val originalData = byteArrayOf(25, 35, 3)
         db.update("insert into blob_test values (1, ?)", originalData.inputStream())
 
-        val data = db.findUnique(ByteArray::class, "select blob_data from blob_test where id=1")
+        val data = db.query("select blob_data from blob_test where id=1").findUnique<ByteArray>()
         assertArrayEquals(originalData, data)
     }
 
@@ -33,7 +33,7 @@ internal class PostgreSQLLargeObjectTest(private val db: DbConnectionProvider) {
         val originalData = "foo"
         db.update("insert into text_test values (1, ?)", originalData.reader())
 
-        val data = db.findUnique(String::class, "select text_data from text_test where id=1")
+        val data = db.query("select text_data from text_test where id=1").findUnique<String>()
         assertEquals(originalData, data)
     }
 }

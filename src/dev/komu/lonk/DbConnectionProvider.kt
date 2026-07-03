@@ -6,18 +6,9 @@ import kotlinx.coroutines.withContext
 /**
  * A factory for [DbConnection] instances, sharing a single configuration
  * (dialect and type conversions) across all connections it creates.
- * 
- * ```
- * val db = JdbcConnectionProvider(dataSource) {
- *     dispatcher = Dispatchers.IO
- *     typeConversions.registerEnum(MyEnum::name)
- * }
- * db.withTransaction { conn ->
- *     conn.findAll(MyType::class, "select ...");
- * }
- * ```
- * 
- * @see DbConnection
+ *
+ * @see dev.komu.lonk.adapter.jdbc.JdbcConnectionProvider
+ * @see dev.komu.lonk.adapter.r2dbc.R2dbcConnectionProvider
  */
 public abstract class DbConnectionProvider internal constructor() {
 
@@ -54,8 +45,7 @@ public abstract class DbConnectionProvider internal constructor() {
      * @see openConnection
      */
     public suspend inline fun <T> withConnection(callback: suspend (DbConnection) -> T): T {
-        // TODO
-        val connection = openConnection(autoCommit = true)
+        val connection = openConnection(autoCommit = false)
         try {
             return callback(connection)
         } finally {

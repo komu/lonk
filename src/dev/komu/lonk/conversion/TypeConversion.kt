@@ -3,9 +3,9 @@ package dev.komu.lonk.conversion
 /**
  * A conversion from S into T.
  */
-internal class TypeConversion private constructor(val conversion: (Any?) -> Any?) {
+internal class TypeConversion private constructor(private val conversion: (Any?) -> Any?) {
 
-    fun convert(value: Any?): Any? =
+    operator fun invoke(value: Any?): Any? =
         conversion(value)
 
     fun compose(function: (Any?) -> Any): TypeConversion =
@@ -19,7 +19,6 @@ internal class TypeConversion private constructor(val conversion: (Any?) -> Any?
         /**
          * Returns identity-conversion, i.e., a conversion that does nothing.
          */
-        fun identity(): TypeConversion =
-            TypeConversion { it }
+        val identity: TypeConversion = TypeConversion { it }
     }
 }

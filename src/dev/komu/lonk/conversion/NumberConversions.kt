@@ -5,7 +5,7 @@ import java.math.BigInteger
 
 internal object NumberConversions : TypeConversions {
 
-    override fun register(registry: TypeConversionRegistry) {
+    override fun register(registry: ConversionsConfigurer) {
         registry.registerConversionFromDatabase(Number::toShort)
         registry.registerConversionFromDatabase(Number::toInt)
         registry.registerConversionFromDatabase(Number::toLong)

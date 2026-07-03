@@ -5,7 +5,7 @@ import java.sql.Blob
 import java.sql.Clob
 
 internal object LobConversions : TypeConversions {
-    override fun register(registry: TypeConversionRegistry) {
+    override fun register(registry: ConversionsConfigurer) {
         registry.registerConversionFromDatabase(Clob::readToString)
         registry.registerConversionFromDatabase(Clob::getCharacterStream)
         registry.registerConversionFromDatabase(Blob::readToByteArray)

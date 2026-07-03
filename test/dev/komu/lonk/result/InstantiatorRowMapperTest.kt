@@ -2,21 +2,22 @@ package dev.komu.lonk.result
 
 import dev.komu.lonk.conversion.DefaultTypeConversionRegistry
 import dev.komu.lonk.instantiation.InstantiatorProvider
+import org.junit.jupiter.api.Assertions.assertTrue
 import kotlin.reflect.KClass
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 internal class InstantiatorRowMapperTest {
 
-    private val instantiatorRegistry = InstantiatorProvider(DefaultTypeConversionRegistry())
+    private val instantiatorProvider = InstantiatorProvider(DefaultTypeConversionRegistry())
 
     @Test
     fun `instantiating with simple constructor`() {
-        val mapper = InstantiatorRowMapper(SingleConstructor::class, instantiatorRegistry).list()
+        val mapper = ListRowCollector(InstantiatorRowMapper(SingleConstructor::class, instantiatorProvider))
 
-        mapper.process(MockResultRow(1, "foo"))
-        mapper.process(MockResultRow(3, "bar"))
-        val list = mapper.build()
+        assertTrue(mapper.accumulate(MockResultRow(1, "foo")))
+        assertTrue(mapper.accumulate(MockResultRow(3, "bar")))
+        val list = mapper.finish()
         assertEquals(2, list.size)
 
         assertEquals(1, list[0].num)
@@ -27,17 +28,17 @@ internal class InstantiatorRowMapperTest {
 
     @Test
     fun `empty result set produces no results`() {
-        val mapper = InstantiatorRowMapper(SingleConstructor::class, instantiatorRegistry).list()
+        val mapper = ListRowCollector(InstantiatorRowMapper(SingleConstructor::class, instantiatorProvider))
 
-        assertEquals(emptyList(), mapper.build())
+        assertEquals(emptyList(), mapper.finish())
     }
 
     @Test
     fun `correct constructor is picked based on types`() {
-        val mapper = InstantiatorRowMapper(TwoConstructors::class, instantiatorRegistry).list()
+        val mapper = ListRowCollector(InstantiatorRowMapper(TwoConstructors::class, instantiatorProvider))
 
-        mapper.process(MockResultRow(1, "foo"))
-        val list = mapper.build()
+        assertTrue(mapper.accumulate(MockResultRow(1, "foo")))
+        val list = mapper.finish()
         assertEquals(1, list.size)
 
         assertEquals(1, list[0].num)
@@ -54,9 +55,11 @@ internal class InstantiatorRowMapperTest {
         )
     }
 
-    private class MockResultRow(private val values: List<Any>) : ResultRow {
+    private class MockResultRow(override val values: List<Any>) : ResultRow {
 
         constructor(vararg values: Any) : this(values.asList())
+
+        override fun get(name: String) = error("no used")
 
         override val columnCount: Int
             get() = values.size

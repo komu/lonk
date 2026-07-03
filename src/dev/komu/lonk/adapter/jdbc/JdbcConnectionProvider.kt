@@ -9,6 +9,9 @@ import kotlinx.coroutines.withContext
 import java.sql.Connection
 import javax.sql.DataSource
 
+/**
+ * A [DbConnectionProvider] backed by a JDBC [DataSource].
+ */
 public class JdbcConnectionProvider internal constructor(
     private val dataSource: DataSource,
     config: Configuration,
@@ -34,6 +37,7 @@ public class JdbcConnectionProvider internal constructor(
     }
 
     public companion object {
+        /** Creates a [JdbcConnectionProvider] for [dataSource], optionally customized with [configurer]. */
         public operator fun invoke(
             dataSource: DataSource,
             configurer: Configuration.() -> Unit = {}
@@ -51,9 +55,8 @@ public class JdbcConnectionProvider internal constructor(
         }
     }
 
-    public class Configuration(
-        public val typeConversions: TypeConversionRegistry
-    ) {
+    /** Configuration options for a [JdbcConnectionProvider]. */
+    public class Configuration(private val typeConversions: ConversionsConfigurer) {
         /**
          * CoroutineDispatcher to use for dispatching the database calls.
          *
@@ -61,6 +64,11 @@ public class JdbcConnectionProvider internal constructor(
          * the size of the connection pool.
          */
         public var dispatcher: CoroutineDispatcher = Dispatchers.IO
+
+        /** Callback for registering custom type conversions. */
+        public fun conversions(block: ConversionsConfigurer.() -> Unit) {
+            block(typeConversions)
+        }
     }
 }
 

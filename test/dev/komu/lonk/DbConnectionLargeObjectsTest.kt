@@ -8,17 +8,17 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 @DatabaseTest(POSTGRESQL)
-internal class DatabaseLargeObjectsTest(private val db: DbConnectionProvider) {
+internal class DbConnectionLargeObjectsTest(private val db: DbConnectionProvider) {
 
     @Test
     fun `clob columns can be coerced to strings`() = transactionalTest(db) { db ->
-        assertEquals("foo", db.findUnique(String::class, "values (cast ('foo' as text))"))
+        assertEquals("foo", db.query("values (cast ('foo' as text))").findUnique<String>())
     }
 
     @Test
     fun `blob columns can be coerced to strings`() = transactionalTest(db) { db ->
         val data = byteArrayOf(1, 2, 3)
-        assertArrayEquals(data, db.findUnique(ByteArray::class, "values (cast (? as bytea))", data))
+        assertArrayEquals(data, db.query("values (cast (? as bytea))", data).findUnique<ByteArray>())
     }
 
     @Test
@@ -29,7 +29,7 @@ internal class DatabaseLargeObjectsTest(private val db: DbConnectionProvider) {
         val originalData = "foobar"
         db.update("insert into clob_test values (1, ?)", originalData.reader())
 
-        assertEquals(originalData, db.findUnique(String::class, "select clob_data from clob_test where id=1"))
+        assertEquals(originalData, db.query("select clob_data from clob_test where id=1").findUnique<String>())
     }
 
     @Test
@@ -40,6 +40,6 @@ internal class DatabaseLargeObjectsTest(private val db: DbConnectionProvider) {
         val originalData = byteArrayOf(25, 35, 3)
         db.update("insert into blob_test values (1, ?)", originalData.inputStream())
 
-        assertArrayEquals(originalData, db.findUnique(ByteArray::class, "select blob_data from blob_test where id=1"))
+        assertArrayEquals(originalData, db.query("select blob_data from blob_test where id=1").findUnique<ByteArray>())
     }
 }

@@ -7,7 +7,7 @@ import kotlin.reflect.cast
 /**
  * The used implementation of TypeConversionRegistry.
  */
-internal class DefaultTypeConversionRegistry : TypeConversionRegistry {
+internal class DefaultTypeConversionRegistry : ConversionsConfigurer {
 
     private val loadConversions = ConversionMap()
     private val storeConversions = ConversionMap()

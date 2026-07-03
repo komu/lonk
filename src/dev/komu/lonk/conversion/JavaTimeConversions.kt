@@ -4,7 +4,7 @@ import java.time.OffsetDateTime
 import java.time.ZoneOffset
 
 internal object JavaTimeConversions : TypeConversions {
-    override fun register(registry: TypeConversionRegistry) {
+    override fun register(registry: ConversionsConfigurer) {
         registry.registerConversions(java.sql.Time::toLocalTime, java.sql.Time::valueOf)
         registry.registerConversions(java.sql.Date::toLocalDate, java.sql.Date::valueOf)
         registry.registerConversions(java.sql.Timestamp::toInstant, java.sql.Timestamp::from)
@@ -14,7 +14,7 @@ internal object JavaTimeConversions : TypeConversions {
 
 internal object JavaTimeWithZoneConversions : TypeConversions {
 
-    override fun register(registry: TypeConversionRegistry) {
+    override fun register(registry: ConversionsConfigurer) {
         registry.registerConversions(OffsetDateTime::toInstant) { OffsetDateTime.ofInstant(it, ZoneOffset.UTC) }
     }
 }

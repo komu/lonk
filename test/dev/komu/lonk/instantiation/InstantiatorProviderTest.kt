@@ -1,5 +1,6 @@
 package dev.komu.lonk.instantiation
 
+import dev.komu.lonk.InstantiationFailureException
 import dev.komu.lonk.conversion.DefaultTypeConversionRegistry
 import dev.komu.lonk.instantiation.test.InaccessibleClassRef
 import dev.komu.lonk.utils.TypeUtils
@@ -8,7 +9,7 @@ import kotlin.test.*
 
 internal class InstantiatorProviderTest {
 
-    private val instantiatorRegistry = InstantiatorProvider(DefaultTypeConversionRegistry())
+    private val instantiatorProvider = InstantiatorProvider(DefaultTypeConversionRegistry())
 
     @Test
     fun `every class is assignable from itself`() {
@@ -32,7 +33,7 @@ internal class InstantiatorProviderTest {
 
     @Test
     fun `find default constructor`() {
-        val result = assertNotNull(instantiate(TestClass::class, NamedTypeList.empty))
+        val result = assertNotNull(instantiate(TestClass::class, emptyList()))
         assertEquals(1, result.calledConstructor)
     }
 
@@ -71,25 +72,21 @@ internal class InstantiatorProviderTest {
     @Test
     fun `dont use ignored constructor`() {
         assertFailsWith<InstantiationFailureException> {
-            instantiate(TestClass::class, createNamedTypeList(Int::class, Int::class), 0, 0)
+            instantiate(TestClass::class, listOf(Int::class, Int::class), 0, 0)
         }
     }
 
     @Test
     fun `explicit constructor is used instead of valid constructor`() {
-        val types = NamedTypeList.build("publicField" to String::class)
-
         assertFailsWith<InstantiationFailureException> {
-            instantiate(TestClassWithExplicitConstructor::class, types, "foo")
+            instantiate(TestClassWithExplicitConstructor::class, listOf(String::class), "foo")
         }
     }
 
     @Test
     fun `explicit constructor is used instead of valid property accessor`() {
-        val types = NamedTypeList.build("propertyWithAccessors" to String::class)
-
         assertFailsWith<InstantiationFailureException> {
-            instantiate(TestClassWithExplicitConstructor::class, types, "bar")
+            instantiate(TestClassWithExplicitConstructor::class, listOf(String::class), "bar")
         }
     }
 
@@ -102,8 +99,7 @@ internal class InstantiatorProviderTest {
 
     @Test
     fun `static method as instantiator`() {
-        val types = NamedTypeList.build("foo" to String::class)
-        val result = assertNotNull(instantiate(TestClassWithStaticInstantiator::class, types, "foo"))
+        val result = assertNotNull(instantiate(TestClassWithStaticInstantiator::class, listOf(String::class), "foo"))
 
         assertEquals("instantiator called: foo", result.value)
     }
@@ -164,21 +160,12 @@ internal class InstantiatorProviderTest {
         constructor(@Suppress("UNUSED_PARAMETER") foo: String)
     }
 
-    private fun <T : Any, V : Any> instantiate(cl: KClass<T>, type: KClass<V>, value: V): T? {
-        return instantiate(cl, createNamedTypeList(type), value)
-    }
+    private fun <T : Any, V : Any> instantiate(cl: KClass<T>, type: KClass<V>, value: V): T =
+        instantiate(cl, listOf(type), value)
 
-    private fun <T : Any> instantiate(cl: KClass<T>, namedTypeList: NamedTypeList, vararg values: Any?): T? {
-        val instantiator = instantiatorRegistry.findInstantiator(cl, namedTypeList)
-
-        @Suppress("UNCHECKED_CAST")
-        val arguments = InstantiatorArguments(namedTypeList, values as Array<Any>)
-        return instantiator.instantiate(arguments)
-    }
-
-    private fun createNamedTypeList(vararg types: KClass<*>): NamedTypeList {
-        val items = types.mapIndexed { i, cl -> "name$i" to cl }.toTypedArray()
-        return NamedTypeList.build(*items)
+    private fun <T : Any> instantiate(cl: KClass<T>, types: List<KClass<*>>, vararg values: Any?): T {
+        val instantiator = instantiatorProvider.findInstantiator(cl, types)
+        return instantiator.instantiate(values.asList())
     }
 
     private fun assertAssignable(target: KClass<*>, source: KClass<*>) {

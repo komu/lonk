@@ -19,7 +19,7 @@ internal class JavaTimeIntegrationTest(private val db: DbConnectionProvider) {
     fun `fetch LocalDateTime`() = transactionalTest(db) { db ->
         assertEquals(
             LocalDateTime.of(2012, 10, 9, 11, 29, 25),
-            db.findUnique(LocalDateTime::class, "VALUES (cast('2012-10-09 11:29:25' AS TIMESTAMP))")
+            db.query("VALUES (cast('2012-10-09 11:29:25' AS TIMESTAMP))").findUnique<LocalDateTime>()
         )
     }
 
@@ -28,7 +28,7 @@ internal class JavaTimeIntegrationTest(private val db: DbConnectionProvider) {
         val time = Instant.ofEpochMilli(1295000000000L)
         assertEquals(
             time,
-            db.findUnique(Instant::class, "VALUES (cast('2011-01-14 10:13:20+00' AS TIMESTAMP WITH TIME ZONE))")
+            db.query("VALUES (cast('2011-01-14 10:13:20+00' AS TIMESTAMP WITH TIME ZONE))").findUnique<Instant>()
         )
     }
 
@@ -41,14 +41,14 @@ internal class JavaTimeIntegrationTest(private val db: DbConnectionProvider) {
 
         db.update("INSERT INTO instant_test (timestamp) VALUES (?)", instant)
 
-        assertEquals(instant, db.findUnique(Instant::class, "SELECT timestamp FROM instant_test"))
+        assertEquals(instant, db.query("SELECT timestamp FROM instant_test").findUnique<Instant>())
     }
 
     @Test
     fun `fetch LocalDates`() = transactionalTest(db) { db ->
         assertEquals(
             LocalDate.of(2012, 10, 9),
-            db.findUnique(LocalDate::class, "VALUES (cast('2012-10-09' AS DATE))")
+            db.query("VALUES (cast('2012-10-09' AS DATE))").findUnique<LocalDate>()
         )
     }
 
@@ -56,7 +56,7 @@ internal class JavaTimeIntegrationTest(private val db: DbConnectionProvider) {
     fun `fetch LocalTime`() = transactionalTest(db) { db ->
         assertEquals(
             LocalTime.of(11, 29, 25),
-            db.findUnique(LocalTime::class, "VALUES (cast('11:29:25' AS TIME))")
+            db.query("VALUES (cast('11:29:25' AS TIME))").findUnique<LocalTime>()
         )
     }
 
@@ -64,16 +64,15 @@ internal class JavaTimeIntegrationTest(private val db: DbConnectionProvider) {
     fun `LocalDates with time-zone problems`() = transactionalTest(db) { db ->
         assertEquals(
             LocalDate.of(2012, 10, 9),
-            db.findUnique(LocalDate::class, "VALUES (cast('2012-10-09' AS DATE))")
+            db.query("VALUES (cast('2012-10-09' AS DATE))").findUnique<LocalDate>()
         )
     }
 
     @Test
     fun `time types as parameters`() = transactionalTest(db) { db ->
-        val container = db.findUnique(
-            DateContainer::class,
-            "VALUES (cast('2012-10-09 11:29:25' AS TIMESTAMP), cast('2012-10-09' AS DATE), cast('11:29:25' AS TIME))"
-        )
+        val container = db
+            .query("VALUES (cast('2012-10-09 11:29:25' AS TIMESTAMP), cast('2012-10-09' AS DATE), cast('11:29:25' AS TIME))")
+            .findUnique<DateContainer>()
 
         assertEquals(LocalDateTime.of(2012, 10, 9, 11, 29, 25), container.dateTime)
         assertEquals(LocalDate.of(2012, 10, 9), container.date)
@@ -91,9 +90,9 @@ internal class JavaTimeIntegrationTest(private val db: DbConnectionProvider) {
 
         db.update("INSERT INTO date_test (timestamp, date, time) VALUES (?, ?, ?)", dateTime, date, time)
 
-        assertEquals(dateTime, db.findUnique(LocalDateTime::class, "SELECT timestamp FROM date_test"))
-        assertEquals(date, db.findUnique(LocalDate::class, "SELECT date FROM date_test"))
-        assertEquals(time, db.findUnique(LocalTime::class, "SELECT time FROM date_test"))
+        assertEquals(dateTime, db.query("SELECT timestamp FROM date_test").findUnique<LocalDateTime>())
+        assertEquals(date, db.query("SELECT date FROM date_test").findUnique<LocalDate>())
+        assertEquals(time, db.query("SELECT time FROM date_test").findUnique<LocalTime>())
     }
 
     class DateContainer(val dateTime: LocalDateTime, val date: LocalDate, val time: LocalTime)

@@ -1,5 +1,6 @@
 package dev.komu.lonk.instantiation
 
+import dev.komu.lonk.InstantiationFailureException
 import dev.komu.lonk.conversion.DefaultTypeConversionRegistry
 import dev.komu.lonk.conversion.TypeConversion
 import dev.komu.lonk.utils.TypeUtils.isAssignable
@@ -25,22 +26,22 @@ internal class InstantiatorProvider(private val typeConversionRegistry: DefaultT
 
         val conversion = typeConversionRegistry.findConversionToDb(value::class)
         return when {
-            conversion != null -> conversion.convert(value)
+            conversion != null -> conversion(value)
             value is Enum<*> -> value.name
             else -> value
         }
     }
 
-    fun <T : Any> findInstantiator(type: KClass<T>, types: NamedTypeList): Instantiator<T> {
-        // First check if we have an immediate conversion registered. If so, we'll just use that.
+    fun <T : Any> findInstantiator(type: KClass<T>, types: List<KClass<*>>): Instantiator<T> {
+        // First, check if we have an immediate conversion registered. If so, we'll just use that.
         if (types.size == 1) {
-            val conversion = findConversionFromDbValue(types.getType(0), type)
+            val conversion = findConversionFromDbValue(types.single(), type)
             if (conversion != null)
-                return Instantiator { args -> conversion.convert(args.singleValue) } as Instantiator<T>
-
-            if (type.isValue)
-                return Instantiator { args -> args.singleValue } as Instantiator<T>
+                return ImmediateSingleValueInstantiator(type, conversion)
         }
+
+        if (types.size == 1 && type.isValue)
+            return ImmediateSingleValueInstantiator(type, TypeConversion.identity)
 
         val instantiator = findExplicitInstantiatorFor(type, types)
         if (instantiator != null)
@@ -50,11 +51,11 @@ internal class InstantiatorProvider(private val typeConversionRegistry: DefaultT
             throw InstantiationFailureException("$type can't be instantiated reflectively because it is not public or missing a @LonkInstantiator-annotation");
 
         return type.constructors
-            .firstNotNullOfOrNull { implicitInstantiatorFrom(it, types) as Instantiator<T>? }
+            .firstNotNullOfOrNull { implicitInstantiatorFrom(it, types) }
             ?: throw InstantiationFailureException("could not find a way to instantiate $type with parameters $types")
     }
 
-    private fun <T : Any> findExplicitInstantiatorFor(cl: KClass<T>, types: NamedTypeList): Instantiator<T>? {
+    private fun <T : Any> findExplicitInstantiatorFor(cl: KClass<T>, types: List<KClass<*>>): Instantiator<T>? {
         val constructors = cl.constructors.filter { it.hasAnnotation<LonkInstantiator>() }
         val methods =
             cl.companionObject?.declaredMemberFunctions?.filter { it.hasAnnotation<LonkInstantiator>() }.orEmpty()
@@ -68,7 +69,7 @@ internal class InstantiatorProvider(private val typeConversionRegistry: DefaultT
                 val ctor = constructors.first()
                 val parameterTypes = ctor.parameters.map { rawType(it.type) }
 
-                resolveConversions(types.types, parameterTypes)
+                resolveConversions(types, parameterTypes)
                     ?.let { ConstructorInstantiator(ctor, it) }
                     ?: throw InstantiationFailureException("could not find a way to instantiate ${cl.jvmName} with parameters $types")
             }
@@ -81,8 +82,8 @@ internal class InstantiatorProvider(private val typeConversionRegistry: DefaultT
                 val parameterTypes = method.parameters.map { rawType(it.type) }
                     .drop(1) // first parameter is the companion object
 
-                resolveConversions(types.types, parameterTypes)
-                    ?.let { CompanionFunctionInstantiator(cl.companionObjectInstance!!, method, it) }
+                resolveConversions(types, parameterTypes)
+                    ?.let { CompanionFunctionInstantiator(cl, cl.companionObjectInstance!!, method, it) }
                     ?: throw InstantiationFailureException("could not find a way to instantiate ${cl.jvmName} with parameters $types")
             }
 
@@ -95,14 +96,14 @@ internal class InstantiatorProvider(private val typeConversionRegistry: DefaultT
      * Returns an instantiator that uses given constructor and given types to create instances,
      * or empty if there are no conversions that can be made to instantiate the type.
      */
-    private fun <T : Any> implicitInstantiatorFrom(ctor: KFunction<T>, types: NamedTypeList): Instantiator<T>? {
+    private fun <T : Any> implicitInstantiatorFrom(ctor: KFunction<T>, types: List<KClass<*>>): Instantiator<T>? {
         if (ctor.visibility == KVisibility.PRIVATE || ctor.visibility == KVisibility.PROTECTED)
             return null
 
         if (ctor.parameters.size != types.size)
             return null
 
-        val conversions = resolveConversions(types.types, ctor.parameters.map { rawType(it.type) })
+        val conversions = resolveConversions(types, ctor.parameters.map { rawType(it.type) })
             ?: return null
 
         return ConstructorInstantiator(ctor, conversions)
@@ -125,7 +126,7 @@ internal class InstantiatorProvider(private val typeConversionRegistry: DefaultT
      */
     private fun findConversionFromDbValue(source: KClass<*>, target: KClass<*>): TypeConversion? {
         if (isAssignable(target, source))
-            return TypeConversion.identity()
+            return TypeConversion.identity
 
         return typeConversionRegistry.findConversionFromDbValue(source, target)
             ?: findEnumConversion(target)
@@ -144,5 +145,4 @@ internal class InstantiatorProvider(private val typeConversionRegistry: DefaultT
 
         return null
     }
-
 }

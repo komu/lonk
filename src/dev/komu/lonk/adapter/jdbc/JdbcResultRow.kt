@@ -12,6 +12,12 @@ internal class JdbcResultRow(private val resultSet: ResultSet) : ResultRow {
     override val columnCount: Int
         get() = metaData.columnCount
 
+    override fun get(name: String): Any? =
+        resultSet.getObject(name)
+
+    override fun get(index: Int): Any? =
+        resultSet.getObject(index + 1)
+
     override fun getColumnLabel(index: Int): String =
         metaData.getColumnLabel(index + 1)
 
@@ -24,7 +30,4 @@ internal class JdbcResultRow(private val resultSet: ResultSet) : ResultRow {
             throw LonkException("Could not find class '$className' specified by ResultSet.", e)
         }
     }
-
-    override fun get(index: Int): Any? =
-        resultSet.getObject(index + 1)
 }

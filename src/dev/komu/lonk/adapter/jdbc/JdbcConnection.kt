@@ -1,9 +1,9 @@
 package dev.komu.lonk.adapter.jdbc
 
-import dev.komu.lonk.DatabaseQuery
 import dev.komu.lonk.DbConnection
+import dev.komu.lonk.adapter.DatabaseQuery
 import dev.komu.lonk.instantiation.InstantiatorProvider
-import dev.komu.lonk.result.ResultAggregator
+import dev.komu.lonk.result.ResultRowCollector
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -16,27 +16,38 @@ import java.sql.Statement
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
+/**
+ * A [DbConnection] backed by a plain JDBC [Connection].
+ */
 public class JdbcConnection internal constructor(
+    /** The underlying JDBC connection. */
     public val connection: Connection,
     instantiatorProvider: InstantiatorProvider,
     private val dispatcher: CoroutineDispatcher,
 ) : DbConnection(instantiatorProvider) {
 
-    override suspend fun <T> doExecuteQuery(processor: ResultAggregator<T>, query: DatabaseQuery): T =
+    override suspend fun <T> executeQuery(query: DatabaseQuery, collector: ResultRowCollector<T>): T =
         withContext(dispatcher) {
             connection.prepareStatement(query.sql).useCancellable { ps ->
+                val rowLimitHint = collector.rowLimitHint
+                if (rowLimitHint != null)
+                    ps.maxRows = rowLimitHint
+
                 ps.bindFrom(query)
 
                 ps.executeQuery().use { rs ->
-                    while (rs.next())
-                        processor.process(JdbcResultRow(rs))
+                    while (rs.next()) {
+                        val cont = collector.accumulate(JdbcResultRow(rs))
+                        if (!cont)
+                            break
+                    }
                 }
 
-                processor.build()
+                collector.finish()
             }
         }
 
-    override suspend fun doUpdate(query: DatabaseQuery): Long =
+    override suspend fun update(query: DatabaseQuery): Long =
         withContext(dispatcher) {
             connection.prepareStatement(query.sql).useCancellable { ps ->
                 ps.bindFrom(query)

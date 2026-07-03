@@ -8,11 +8,11 @@ import kotlin.test.Test
 import kotlin.test.assertNull
 
 @DatabaseTest(POSTGRESQL)
-internal class DatabaseReflectiveInstantiationTest(private val db: DbConnectionProvider) {
+internal class DbConnectoinReflectiveInstantiationTest(private val db: DbConnectionProvider) {
 
     @Test
     fun `constructor binding with null values and conversions`() = transactionalTest(db) { db ->
-        val result = db.findUnique(ConstructorNeedingConversion::class, "values (cast(null as timestamp))")
+        val result = db.query("values (cast(null as timestamp))").findUnique<ConstructorNeedingConversion>()
         assertNull(result.dateTime)
     }
 

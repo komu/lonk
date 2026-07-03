@@ -15,7 +15,7 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.measureTime
 
 @DatabaseTest(POSTGRESQL)
-internal class DatabaseCancellationTest(private val provider: DbConnectionProvider) {
+internal class DbConnectionCancellationTest(private val provider: DbConnectionProvider) {
 
     @Test
     @Disabled("this fails with R2DBC")
@@ -72,7 +72,7 @@ internal class DatabaseCancellationTest(private val provider: DbConnectionProvid
         // If ps.cancel() left the underlying connection/session in a bad state
         // (e.g. driver didn't fully drain the cancelled query before the next one),
         // this would fail or hang instead of returning cleanly.
-        assertEquals(42, db.find(unique<Int>(), query("values (42)")))
+        assertEquals(42, db.query("values (42)").findUnique<Int>())
     }
 
     @Test
@@ -87,7 +87,7 @@ internal class DatabaseCancellationTest(private val provider: DbConnectionProvid
             }
             val bystander = async {
                 provider.withTransaction { other ->
-                    other.find(unique(Int::class), "values (7)")
+                    other.query("values (7)").findUnique<Int>()
                 }
             }
             delay(300.milliseconds)
@@ -98,6 +98,6 @@ internal class DatabaseCancellationTest(private val provider: DbConnectionProvid
     }
 
     private suspend fun DbConnection.sleepInDatabase() {
-        val _ = find(unique(Int::class), "select pg_sleep(3)::text, 1")
+        val _ = query("select pg_sleep(3)::text").findUnique<String>()
     }
 }

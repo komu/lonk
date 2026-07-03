@@ -11,18 +11,20 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 @DatabaseTest(POSTGRESQL)
-internal class DatabaseCustomConversionTest(private val ds: DataSource) {
+internal class DbConnectionCustomConversionTest(private val ds: DataSource) {
 
     @Test
     fun `custom load conversions`() {
         val db = JdbcConnectionProvider(ds) {
-            typeConversions.registerConversionFromDatabase(EmailAddress::parse)
+            conversions {
+                registerConversionFromDatabase(EmailAddress::parse)
+            }
         }
 
         transactionalTest(db) { db ->
             assertEquals(
                 EmailAddress("user", "example.org"),
-                db.findUnique(EmailAddress::class, "values ('user@example.org')")
+                db.query("values ('user@example.org')").findUnique<EmailAddress>()
             )
         }
     }
@@ -30,7 +32,9 @@ internal class DatabaseCustomConversionTest(private val ds: DataSource) {
     @Test
     fun `custom save conversions`() {
         val db = JdbcConnectionProvider(ds) {
-            typeConversions.registerConversionToDatabase(EmailAddress::toString)
+            conversions {
+                registerConversionToDatabase(EmailAddress::toString)
+            }
         }
 
         transactionalTest(db) { db ->
@@ -45,7 +49,7 @@ internal class DatabaseCustomConversionTest(private val ds: DataSource) {
 
             assertEquals(
                 "user@example.org",
-                db.findUnique(String::class, "select email from custom_save_conversions_test")
+                db.query("select email from custom_save_conversions_test").findUnique<String>()
             )
         }
     }

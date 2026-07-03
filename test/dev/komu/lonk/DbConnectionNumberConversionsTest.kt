@@ -11,53 +11,53 @@ import java.net.URL
 import kotlin.test.Test
 
 @DatabaseTest(POSTGRESQL)
-internal class NumberConversionsTest(private val db: DbConnectionProvider) {
+internal class DbConnectionNumberConversionsTest(private val db: DbConnectionProvider) {
 
     @Test
     fun `short conversions`() = transactionalTest(db) { db ->
-        assertEquals(42.toShort(), db.findUnique(Short::class, "values (42)"))
-        assertEquals(42.toShort(), db.findUnique(Short::class, "values (42)"))
-        assertEquals(42.toShort(), db.findUnique(Short::class, "values (cast(42 as bigint))"))
+        assertEquals(42.toShort(), db.query("values (42)").findUnique<Short>())
+        assertEquals(42.toShort(), db.query("values (42)").findUnique<Short>())
+        assertEquals(42.toShort(), db.query("values (cast(42 as bigint))").findUnique<Short>())
     }
 
     @Test
     fun `int conversions`() = transactionalTest(db) { db ->
-        assertEquals(42, db.findUnique(Int::class, "values (42)"))
-        assertEquals(42, db.findUnique<Int>("values (42)"))
-        assertEquals(42, db.findUnique(Int::class, "values (cast (42 as bigint))"))
+        assertEquals(42, db.query("values (42)").findUnique<Int>())
+        assertEquals(42, db.query("values (42)").findUnique<Int>())
+        assertEquals(42, db.query("values (cast (42 as bigint))").findUnique<Int>())
     }
 
     @Test
     fun `long conversions`() = transactionalTest(db) { db ->
-        assertEquals(42L, db.findUnique(Long::class, "values (42)"))
-        assertEquals(42L, db.findUniqueLong("values (42)"))
+        assertEquals(42L, db.query("values (42)").findUnique<Long>())
+        assertEquals(42L, db.query("values (42)").findUnique<Long>())
     }
 
     @Test
     fun `boolean conversions`() = transactionalTest(db) { db ->
-        assertEquals(true, db.findUnique(Boolean::class, "select true"))
-        assertEquals(true, db.findUnique<Boolean>("select true"))
-        assertEquals(false, db.findUnique<Boolean>("select false"))
+        assertEquals(true, db.query("select true").findUnique<Boolean>())
+        assertEquals(true, db.query("select true").findUnique<Boolean>())
+        assertEquals(false, db.query("select false").findUnique<Boolean>())
     }
 
     @Test
     fun `float conversions`() = transactionalTest(db) { db ->
-        assertEquals(42.0f, db.findUnique(Float::class, "values (42)"))
+        assertEquals(42.0f, db.query("values (42)").findUnique<Float>())
     }
 
     @Test
     fun `double conversions`() = transactionalTest(db) { db ->
-        assertEquals(42.0, db.findUnique(Double::class, "values (42)"))
+        assertEquals(42.0, db.query("values (42)").findUnique<Double>())
     }
 
     @Test
     fun `BigInteger conversions`() = transactionalTest(db) { db ->
-        assertEquals(BigInteger.valueOf(42), db.findUnique(BigInteger::class, "values (42)"))
+        assertEquals(BigInteger.valueOf(42), db.query("values (42)").findUnique<BigInteger>())
     }
 
     @Test
     fun `BigDecimal conversions`() = transactionalTest(db) { db ->
-        assertEquals(BigDecimal.valueOf(42), db.findUnique(BigDecimal::class, "values (42)"))
+        assertEquals(BigDecimal.valueOf(42), db.query("values (42)").findUnique<BigDecimal>())
     }
 
     @Test
@@ -78,7 +78,7 @@ internal class NumberConversionsTest(private val db: DbConnectionProvider) {
             shortValue, intValue, longValue, floatValue, doubleValue, bigIntegerValue, bigDecimalValue
         )
 
-        val numbers = db.findUnique(Numbers::class, "select * from numbers")
+        val numbers = db.query("select * from numbers").findUnique<Numbers>()
 
         assertEquals(shortValue, numbers.shortValue)
         assertEquals(intValue, numbers.intValue)
@@ -101,7 +101,7 @@ internal class NumberConversionsTest(private val db: DbConnectionProvider) {
 
     @Test
     fun count() = transactionalTest(db) { db ->
-        assertEquals(3, db.findUnique<Int>("select count(*) from (values (1), (2), (3)) n"))
+        assertEquals(3, db.query("select count(*) from (values (1), (2), (3)) n").findUnique<Int>())
     }
 
     class UrlAndUri(val url: URL, val uri: URI)

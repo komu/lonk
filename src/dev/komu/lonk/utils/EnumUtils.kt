@@ -1,6 +1,6 @@
 package dev.komu.lonk.utils
 
-import dev.komu.lonk.instantiation.InstantiationFailureException
+import dev.komu.lonk.InstantiationFailureException
 import kotlin.reflect.KClass
 import kotlin.reflect.jvm.jvmName
 

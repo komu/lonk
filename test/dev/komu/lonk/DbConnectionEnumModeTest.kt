@@ -10,12 +10,14 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 @DatabaseTest(POSTGRESQL)
-internal class DatabaseEnumModeTest(private val ds: DataSource) {
+internal class DbConnectionEnumModeTest(private val ds: DataSource) {
 
     @Test
     fun `name enum mode`() {
         val db = JdbcConnectionProvider(ds) {
-            typeConversions.registerEnum(MyEnum::name)
+            conversions {
+                registerEnum(MyEnum::name)
+            }
         }
 
         transactionalTest(db) { db ->
@@ -24,14 +26,19 @@ internal class DatabaseEnumModeTest(private val ds: DataSource) {
 
             db.update("insert into enum_mode_test (name, value) values ('foo', ?)", MyEnum.FOO)
 
-            assertEquals(MyEnum.FOO, db.findUnique(MyEnum::class, "select value from enum_mode_test where name='foo'"))
+            assertEquals(
+                MyEnum.FOO,
+                db.query("select value from enum_mode_test where name='foo'").findUnique<MyEnum>()
+            )
         }
     }
 
     @Test
     fun `ordinal enum mode`() {
         val db = JdbcConnectionProvider(ds) {
-            typeConversions.registerEnum(MyEnum::ordinal)
+            conversions {
+                registerEnum(MyEnum::ordinal)
+            }
         }
 
         transactionalTest(db) { db ->
@@ -40,7 +47,10 @@ internal class DatabaseEnumModeTest(private val ds: DataSource) {
 
             db.update("insert into enum_mode_test (name, value) values ('foo', ?)", MyEnum.FOO)
 
-            assertEquals(MyEnum.FOO, db.findUnique(MyEnum::class, "select value from enum_mode_test where name='foo'"))
+            assertEquals(
+                MyEnum.FOO,
+                db.query("select value from enum_mode_test where name='foo'").findUnique<MyEnum>()
+            )
         }
     }
 

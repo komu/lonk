@@ -1,222 +1,107 @@
 package dev.komu.lonk
 
+import dev.komu.lonk.adapter.DatabaseQuery
 import dev.komu.lonk.instantiation.InstantiatorProvider
 import dev.komu.lonk.result.*
 import org.intellij.lang.annotations.Language
 import kotlin.reflect.KClass
 
+/**
+ * An open connection to the database, used to run queries and updates.
+ *
+ * @see DbConnectionProvider
+ */
 public abstract class DbConnection internal constructor(
     private val instantiatorProvider: InstantiatorProvider,
 ) {
 
-    internal abstract suspend fun <T> doExecuteQuery(processor: ResultAggregator<T>, query: DatabaseQuery): T
-    internal abstract suspend fun doUpdate(query: DatabaseQuery): Long
+    /** Binds [sql] and [args] into a [BoundQuery] ready to be executed. */
+    public fun query(@Language("SQL") sql: String, vararg args: Any?): BoundQuery =
+        query(SqlQuery(sql, args.asList()))
 
+    /** Binds [query] into a [BoundQuery] ready to be executed. */
+    public fun query(query: SqlQuery): BoundQuery =
+        BoundQuery(this, query)
+
+    /** Commit the current transaction. */
     public abstract suspend fun commit()
+
+    /** Roll back the current transaction. */
     public abstract suspend fun rollback()
 
     /** Close this connection */
     public abstract suspend fun close()
 
-    public suspend fun <T> executeQuery(processor: ResultAggregator<T>, query: SqlQuery): T =
-        doExecuteQuery(processor, query.toDatabase())
-
-    public suspend fun <T : Any> executeQuery(query: SqlQuery, resultAggregator: ResultAggregator<T>): T =
-        executeQuery(resultAggregator, query)
-    /**
-     * Executes a query and processes the results with given [ResultAggregator].
-     * 
-     * @see .executeQuery
-     */
-    public suspend fun <T> executeQuery(
-        processor: ResultAggregator<T>,
-        @Language("SQL") sql: String,
-        vararg args: Any?
-    ): T =
-        executeQuery(processor, query(sql, *args))
-
-    /**
-     * Executes a query and processes each row of the result with given [RowMapper]
-     * to produce a list of results.
-     */
-    public suspend fun <T> findAll(rowMapper: RowMapper<T>, query: SqlQuery): List<T> =
-        executeQuery(rowMapper.list(), query)
-
-    public suspend fun <T : Any> findAll(
-        @Language("SQL") sql: String,
-        vararg args: Any?,
-        rowMapper: (ResultRow) -> T
-    ): List<T> =
-        findAll(query(sql, *args), rowMapper)
-
-    public suspend fun <T : Any> findAll(query: SqlQuery, rowMapper: (ResultRow) -> T): List<T> =
-        findAll({ rowMapper(it) }, query)
-
-
-    /**
-     * Executes a query and processes each row of the result with given [RowMapper]
-     * to produce a list of results.
-     */
-    public suspend fun <T> findAll(rowMapper: RowMapper<T>, @Language("SQL") sql: String, vararg args: Any?): List<T> =
-        findAll(rowMapper, query(sql, *args))
-
-    /**
-     * Executes a query and converts the results to instances of the given class using default mechanisms.
-     */
-    public suspend inline fun <reified T : Any> findAll(@Language("SQL") sql: String, vararg args: Any?): List<T> =
-        findAll(query(sql, *args))
-
-    /**
-     * Executes a query and converts the results to instances of the given class using default mechanisms.
-     */
-    public suspend inline fun <reified T : Any> findAll(query: SqlQuery): List<T> =
-        findAll(T::class, query)
-
-    /**
-     * Executes a query and converts the results to instances of the given class using default mechanisms.
-     */
-    public suspend fun <T : Any> findAll(cl: KClass<T>, query: SqlQuery): List<T> =
-        executeQuery<List<T>>(resultProcessorForClass(cl), query)
-
-    public suspend fun <T : Any> findAll(cl: KClass<T>, @Language("SQL") sql: String, vararg args: Any?): List<T> =
-        findAll(cl, query(sql, *args))
-
-    public suspend fun <T : Any> findUnique(
-        @Language("SQL") sql: String,
-        vararg args: Any?,
-        rowMapper: (ResultRow) -> T
-    ): T =
-        findUnique(query(sql, *args), rowMapper)
-
-    public suspend fun <T : Any> findUnique(query: SqlQuery, rowMapper: (ResultRow) -> T): T =
-        findUnique({ rowMapper(it) }, query)
-
-    public suspend fun <T> findUnique(mapper: RowMapper<T>, query: SqlQuery): T = executeQuery(mapper.unique(), query)
-
-    public suspend fun <T> findUnique(mapper: RowMapper<T>, @Language("SQL") sql: String, vararg args: Any?): T =
-        findUnique(mapper, query(sql, *args))
-
-    public suspend inline fun <reified T : Any> findUnique(@Language("SQL") sql: String, vararg args: Any?): T =
-        findUnique(query(sql, *args))
-
-    public suspend inline fun <reified T : Any> findUnique(query: SqlQuery): T =
-        findUnique(T::class, query)
-
-    public suspend fun <T : Any> findUnique(cl: KClass<T>, query: SqlQuery): T =
-        executeQuery(rowMapperForClass(cl).unique(), query)
-
-    public suspend fun <T : Any> findUnique(cl: KClass<T>, @Language("SQL") sql: String, vararg args: Any?): T =
-        findUnique(cl, query(sql, *args))
-
-    public suspend fun <T : Any> findNullableUnique(
-        @Language("SQL") sql: String,
-        vararg args: Any?,
-        rowMapper: (ResultRow) -> T
-    ): T? =
-        findNullableUnique(query(sql, *args), rowMapper)
-
-    public suspend fun <T : Any> findNullableUnique(query: SqlQuery, rowMapper: (ResultRow) -> T): T? =
-        findNullableUnique({ rowMapper(it) }, query)
-
-    public suspend fun <T : Any> findNullableUnique(rowMapper: RowMapper<T>, query: SqlQuery): T? =
-        executeQuery(rowMapper.optional(), query)
-
-    /**
-     * Alias for {findUniqueOrNull(rowMapper, SqlQuery.query(sql, args))}.
-     */
-    public suspend fun <T : Any> findNullableUnique(
-        rowMapper: RowMapper<T>,
-        @Language("SQL") sql: String,
-        vararg args: Any?
-    ): T? =
-        findNullableUnique(rowMapper, query(sql, *args))
-
-    public suspend inline fun <reified T : Any> findUniqueOrNull(@Language("SQL") sql: String, vararg args: Any?): T? =
-        findUniqueOrNull(query(sql, *args))
-
-    public suspend inline fun <reified T : Any> findUniqueOrNull(query: SqlQuery): T? =
-        findUniqueOrNull(T::class, query)
-
-    public suspend fun <T : Any> findUniqueOrNull(cl: KClass<T>, @Language("SQL") sql: String, vararg args: Any?): T? =
-        findUniqueOrNull(cl, query(sql, *args))
-
-    public suspend fun <T : Any> findUniqueOrNull(cl: KClass<T>, query: SqlQuery): T? =
-        executeQuery(rowMapperForClass(cl).optional(), query)
-
-    public suspend inline fun <reified T : Any> findNullableUnique(
-        @Language("SQL") sql: String,
-        vararg args: Any?
-    ): T? =
-        findNullableUnique(query(sql, *args))
-
-    public suspend inline fun <reified T : Any> findNullableUnique(query: SqlQuery): T? =
-        findNullableUnique(T::class, query)
-
-    public suspend fun <T : Any> findNullableUnique(cl: KClass<T>, query: SqlQuery): T? =
-        executeQuery(nullableRowMapperForClass(cl).unique(), query)
-
-    public suspend fun <T : Any> findNullableUnique(
-        cl: KClass<T>,
-        @Language("SQL") sql: String,
-        vararg args: Any?
-    ): T? =
-        findNullableUnique(cl, query(sql, *args))
-
-    /**
-     * A convenience method for retrieving a single non-null integer.
-     * 
-     * @throws NonUniqueResultException if there is more then one row
-     * @throws EmptyResultException     if there are no rows
-     */
-    public suspend fun findUniqueInt(query: SqlQuery): Int =
-        executeQuery(rowMapperForClass(Int::class).unique(), query)
-
-    /**
-     * A convenience method for retrieving a single non-null long.
-     * 
-     * @throws NonUniqueResultException if there is more then one row
-     * @throws EmptyResultException     if there are no rows
-     */
-    public suspend fun findUniqueLong(query: SqlQuery): Long =
-        executeQuery(rowMapperForClass(Long::class).unique(), query)
-
-    /**
-     * A convenience method for retrieving a single non-null long.
-     * 
-     * @throws NonUniqueResultException if there is more then one row
-     * @throws EmptyResultException     if there are no rows
-     */
-    public suspend fun findUniqueLong(@Language("SQL") sql: String, vararg args: Any?): Long =
-        findUniqueLong(query(sql, *args))
-
-    /**
-     * Executes an update against the database and returns the number of affected rows.
-     */
+    /** Executes an update against the database and returns the number of affected rows. */
     @IgnorableReturnValue
     public suspend fun update(query: SqlQuery): Long =
-        doUpdate(query.toDatabase())
+        update(toDatabase(query))
 
-    /**
-     * Executes an update against the database and returns the amount of affected rows.
-     */
+    /** Executes an update against the database and returns the number of affected rows. */
     @IgnorableReturnValue
     public suspend fun update(@Language("SQL") sql: String, vararg args: Any?): Long =
-        update(query(sql, *args))
+        update(SqlQuery(sql, args.asList()))
 
-    private fun <T : Any> resultProcessorForClass(cl: KClass<T>): ResultAggregator<List<T>> {
-        return rowMapperForClass(cl).list()
-    }
+    internal abstract suspend fun <T> executeQuery(query: DatabaseQuery, collector: ResultRowCollector<T>): T
+    internal abstract suspend fun update(query: DatabaseQuery): Long
 
-    private fun <T : Any> rowMapperForClass(cl: KClass<T>): RowMapper<T> {
-        return InstantiatorRowMapper(cl, instantiatorProvider)
-    }
+    private suspend fun <T> executeQuery(query: SqlQuery, collector: ResultRowCollector<T>): T =
+        executeQuery(toDatabase(query), collector)
 
-    private fun <T : Any> nullableRowMapperForClass(cl: KClass<T>): RowMapper<T?> {
-        return NullableInstantiatorRowMapper(cl, instantiatorProvider)
-    }
-
-    private fun SqlQuery.toDatabase() = DatabaseQuery(
-        sql = sql,
-        arguments = arguments.map { instantiatorProvider.valueToDatabase(it) },
+    private fun toDatabase(query: SqlQuery) = DatabaseQuery(
+        sql = query.sql,
+        arguments = query.arguments.map { instantiatorProvider.valueToDatabase(it) },
     )
+
+    /** A query bound to a connection and its arguments, ready to be executed. */
+    public class BoundQuery internal constructor(private val c: DbConnection, private val query: SqlQuery) {
+        /** Executes the query and maps every row with [rowMapper]. */
+        public suspend fun <T> findAll(rowMapper: ResultRowMapper<T>): List<T> =
+            collect(ListRowCollector(rowMapper))
+
+        /** Executes the query and instantiates every row as [cl]. */
+        public suspend fun <T : Any> findAll(cl: KClass<T>): List<T> =
+            findAll(InstantiatorRowMapper(cl, c.instantiatorProvider))
+
+        /** Executes the query and instantiates every row as [T]. */
+        public suspend inline fun <reified T : Any> findAll(): List<T> =
+            findAll(T::class)
+
+        /** Executes the query and maps its single row with [rowMapper], failing unless exactly one row was returned. */
+        public suspend fun <T : Any> findUnique(rowMapper: ResultRowMapper<T>): T =
+            collect(UniqueRowCollector(rowMapper))
+
+        /** Executes the query and instantiates its single row as [cl], failing unless exactly one row was returned. */
+        public suspend fun <T : Any> findUnique(cl: KClass<T>): T =
+            findUnique(InstantiatorRowMapper(cl, c.instantiatorProvider))
+
+        /** Executes the query and instantiates its single row as [T], failing unless exactly one row was returned. */
+        public suspend inline fun <reified T : Any> findUnique(): T =
+            findUnique(T::class)
+
+        /** Executes the query and maps its row with [rowMapper], returning `null` if there were no rows. Fails if there is more than one row. */
+        public suspend fun <T : Any> findOptional(rowMapper: ResultRowMapper<T>): T? =
+            collect(OptionalRowCollector(rowMapper))
+
+        /** Executes the query and instantiates its row as [cl], returning `null` if there were no rows. Fails if there is more than one row. */
+        public suspend fun <T : Any> findOptional(cl: KClass<T>): T? =
+            findOptional(InstantiatorRowMapper(cl, c.instantiatorProvider))
+
+        /** Executes the query and instantiates its row as [T], returning `null` if there were no rows. Fails if there is more than one row. */
+        public suspend inline fun <reified T : Any> findOptional(): T? =
+            findOptional(T::class)
+
+        /** Executes the query, requiring exactly one row, and instantiates it as [cl], allowing the result itself to be `null`. */
+        public suspend fun <T : Any> findUniqueNullable(cl: KClass<T>): T? =
+            collect(UniqueRowCollector(SingleNullableColumnInstantiatorRowMapper(cl, c.instantiatorProvider)))
+
+        /** Executes the query, requiring exactly one row, and instantiates it as [T], allowing the result itself to be `null`. */
+        public suspend inline fun <reified T : Any> findUniqueNullable(): T? =
+            findUniqueNullable(T::class)
+
+        /** Executes the given query and processes the results with the given [collector] */
+        public suspend fun <T> collect(collector: ResultRowCollector<T>): T =
+            c.executeQuery(query, collector)
+    }
 }
+

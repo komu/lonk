@@ -1,7 +1,7 @@
 package dev.komu.lonk.adapter.jdbc
 
+import dev.komu.lonk.SqlQuery
 import dev.komu.lonk.adapter.ConnectionAdapter
-import dev.komu.lonk.query.SqlQuery
 import dev.komu.lonk.result.ResultSetProcessor
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
@@ -64,8 +64,6 @@ internal class JdbcConnectionAdapter(
 }
 
 private fun PreparedStatement.bindFrom(query: SqlQuery) {
-    query.fetchDirection?.let { this.fetchDirection = it.jdbcCode }
-    query.fetchSize?.let { this.fetchSize = it }
     query.timeout?.let { this.queryTimeout = it.inWholeSeconds.toInt() }
 
     for ((i, arg) in query.arguments.withIndex())

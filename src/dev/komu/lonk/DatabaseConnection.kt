@@ -1,8 +1,6 @@
 package dev.komu.lonk
 
 import dev.komu.lonk.instantiation.InstantiatorProvider
-import dev.komu.lonk.query.SqlQuery
-import dev.komu.lonk.query.query
 import dev.komu.lonk.result.*
 import org.intellij.lang.annotations.Language
 import java.sql.ResultSet

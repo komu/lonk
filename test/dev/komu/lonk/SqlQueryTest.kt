@@ -1,6 +1,5 @@
 package dev.komu.lonk
 
-import dev.komu.lonk.query.query
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals

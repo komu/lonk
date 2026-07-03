@@ -1,6 +1,6 @@
 package dev.komu.lonk.adapter
 
-import dev.komu.lonk.query.SqlQuery
+import dev.komu.lonk.SqlQuery
 import dev.komu.lonk.result.ResultSetProcessor
 
 public interface ConnectionAdapter<C> {

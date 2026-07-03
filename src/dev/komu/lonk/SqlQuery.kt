@@ -1,4 +1,4 @@
-package dev.komu.lonk.query
+package dev.komu.lonk
 
 import org.intellij.lang.annotations.Language
 import kotlin.time.Duration
@@ -9,13 +9,10 @@ import kotlin.time.Duration
 public data class SqlQuery(
     @param:Language("SQL") val sql: String,
     val arguments: List<*>,
-    val fetchSize: Int? = null,
-    val fetchDirection: FetchDirection? = null,
     val timeout: Duration? = null,
 ) {
 
     init {
-        require(fetchSize == null || fetchSize >= 0) { "Illegal fetch size $fetchSize. Fetch size must be null or >= 0" }
         require(timeout == null || timeout >= Duration.ZERO) { "Negative timeout: $timeout" }
     }
 

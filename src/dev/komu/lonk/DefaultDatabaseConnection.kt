@@ -2,7 +2,6 @@ package dev.komu.lonk
 
 import dev.komu.lonk.adapter.ConnectionAdapter
 import dev.komu.lonk.instantiation.InstantiatorProvider
-import dev.komu.lonk.query.SqlQuery
 import dev.komu.lonk.result.ResultSetProcessor
 import java.sql.SQLException
 

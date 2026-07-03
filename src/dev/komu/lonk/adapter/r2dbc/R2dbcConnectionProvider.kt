@@ -68,7 +68,6 @@ public class R2dbcConnectionProvider internal constructor(
              * dialect-specific placeholders, or leave the query as it is?
              */
             public var placeholderTranslation: PlaceholderTranslation = PlaceholderTranslation.None
-
         }
     }
 }

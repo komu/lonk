@@ -4,7 +4,6 @@ import dev.komu.lonk.instantiation.InstantiatorProvider
 import dev.komu.lonk.result.*
 import org.intellij.lang.annotations.Language
 import kotlin.reflect.KClass
-import kotlin.time.Duration
 
 public abstract class DbConnection internal constructor(
     private val instantiatorProvider: InstantiatorProvider,
@@ -18,15 +17,6 @@ public abstract class DbConnection internal constructor(
 
     /** Close this connection */
     public abstract suspend fun close()
-
-    /**
-     * default timeout set on all statements
-     */
-    public var defaultTimeout: Duration? = null
-        set(value) {
-            require(value != null && value >= Duration.ZERO) { "Negative timeout: $value" }
-            field = value
-        }
 
     public suspend fun <T> executeQuery(processor: ResultAggregator<T>, query: SqlQuery): T =
         doExecuteQuery(processor, query.toDatabase())
@@ -228,6 +218,5 @@ public abstract class DbConnection internal constructor(
     private fun SqlQuery.toDatabase() = DatabaseQuery(
         sql = sql,
         arguments = arguments.map { instantiatorProvider.valueToDatabase(it) },
-        timeout = timeout ?: defaultTimeout
     )
 }

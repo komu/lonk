@@ -5,6 +5,7 @@ import dev.komu.lonk.DbConnection
 import dev.komu.lonk.instantiation.InstantiatorProvider
 import dev.komu.lonk.result.ResultAggregator
 import dev.komu.lonk.result.ResultRow
+import io.r2dbc.postgresql.api.PostgresqlConnection
 import io.r2dbc.spi.Connection
 import io.r2dbc.spi.Row
 import io.r2dbc.spi.RowMetadata
@@ -12,6 +13,8 @@ import io.r2dbc.spi.Statement
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactive.collect
+import org.reactivestreams.Publisher
+import reactor.core.publisher.Flux
 import java.io.InputStream
 import java.io.Reader
 import kotlin.reflect.KClass
@@ -24,24 +27,21 @@ public class R2dbcConnection internal constructor(
 
     override suspend fun doUpdate(query: DatabaseQuery): Long {
         val statement = connection.createStatement(query.translatedSql)
+        statement.bindFrom(query)
 
-        // TODO timeout
-
-        for ((i, value) in query.arguments.withIndex())
-            statement.bindArgument(i, value)
-
-        val result = statement.execute().awaitFirst()
-        return result.rowsUpdated.awaitFirstOrNull() ?: 0
+        val result = statement.execute().cancelling(connection).awaitFirst()
+        return result.rowsUpdated.cancelling(connection).awaitFirstOrNull() ?: 0
     }
 
     override suspend fun <T> doExecuteQuery(processor: ResultAggregator<T>, query: DatabaseQuery): T {
         val statement = connection.createStatement(query.translatedSql)
 
-        for ((i, value) in query.arguments.withIndex())
-            statement.bindArgument(i, value)
+        statement.bindFrom(query)
 
-        statement.execute().collect { result ->
-            result.map { row, metadata -> processor.process(R2DBCResultRow(row, metadata)) }.collect { }
+        statement.execute().cancelling(connection).collect { result ->
+            result.map { row, metadata -> processor.process(R2DBCResultRow(row, metadata)) }
+                .cancelling(connection)
+                .collect { }
         }
 
         return processor.build()
@@ -79,6 +79,19 @@ public class R2dbcConnection internal constructor(
             PlaceholderTranslation.PostgreSQL -> translatePlaceholdersForPostgreSQL(sql)
             PlaceholderTranslation.None -> sql
         }
+}
+
+private fun <T> Publisher<T>.cancelling(connection: Connection): Flux<T> =
+    Flux.from(this).doOnCancel {
+        // TODO this still requires PostgreSQL driver on classpath. modify the code so that it's not required
+        if (connection is PostgresqlConnection) {
+            connection.cancelRequest().subscribe(null) { }
+        }
+    }
+
+private fun Statement.bindFrom(query: DatabaseQuery) {
+    for ((i, value) in query.arguments.withIndex())
+        bindArgument(i, value)
 }
 
 private fun Statement.bindArgument(index: Int, value: Any?) {

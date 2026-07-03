@@ -1,7 +1,6 @@
 package dev.komu.lonk
 
 import org.intellij.lang.annotations.Language
-import kotlin.time.Duration
 
 /**
  * Represents an SQL query along all of its arguments.
@@ -9,12 +8,7 @@ import kotlin.time.Duration
 public data class SqlQuery(
     @param:Language("SQL") val sql: String,
     val arguments: List<*>,
-    val timeout: Duration? = null,
 ) {
-
-    init {
-        require(timeout == null || timeout >= Duration.ZERO) { "Negative timeout: $timeout" }
-    }
 
     override fun toString(): String {
         val sb = StringBuilder(10 + sql.length + 10 * arguments.size)

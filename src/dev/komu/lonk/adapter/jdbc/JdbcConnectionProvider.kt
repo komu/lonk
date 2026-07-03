@@ -22,7 +22,11 @@ public class JdbcConnectionProvider internal constructor(
         val connection = dataSource.connection
         try {
             connection.autoCommit = autoCommit
-            JdbcConnection(connection, instantiatorProvider, dispatcher)
+            JdbcConnection(
+                connection = connection,
+                instantiatorProvider = instantiatorProvider,
+                dispatcher = dispatcher
+            )
         } catch (e: Throwable) {
             connection.closeSuppressing(e)
             throw e
@@ -50,6 +54,12 @@ public class JdbcConnectionProvider internal constructor(
     public class Configuration(
         public val typeConversions: TypeConversionRegistry
     ) {
+        /**
+         * CoroutineDispatcher to use for dispatching the database calls.
+         *
+         * By default [Dispatchers.IO], but it's a good idea to provide a custom pool that matches
+         * the size of the connection pool.
+         */
         public var dispatcher: CoroutineDispatcher = Dispatchers.IO
     }
 }

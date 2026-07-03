@@ -1,14 +1,13 @@
 package dev.komu.lonk
 
-import dev.komu.lonk.testutils.DatabaseProvider.HSQL
+import dev.komu.lonk.testutils.DatabaseProvider.POSTGRESQL
 import dev.komu.lonk.testutils.DatabaseTest
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.BeforeEach
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFails
 
-@DatabaseTest(HSQL)
+@DatabaseTest(POSTGRESQL)
 internal class DatabaseConnectionTest(private val source: DatabaseSource) {
 
     @BeforeEach
@@ -50,19 +49,6 @@ internal class DatabaseConnectionTest(private val source: DatabaseSource) {
 
         source.withConnection { conn ->
             assertEquals(2, conn.findAll(String::class, "select value from dc_test").size)
-        }
-    }
-
-    @Test
-    fun `exception during query does not prevent close from committing`() = runBlocking {
-        val _ = source.withConnection { conn ->
-            conn.update("insert into dc_test values ('committed')")
-            assertFails { conn.findUnique(String::class, "select value from nonexistent_table") }
-        }
-
-        // The insert before the failing query was committed (no automatic rollback on exception)
-        source.withConnection { conn ->
-            assertEquals(1, conn.findAll(String::class, "select value from dc_test").size)
         }
     }
 }

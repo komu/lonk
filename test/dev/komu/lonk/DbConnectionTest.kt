@@ -1,6 +1,9 @@
 package dev.komu.lonk
 
-import dev.komu.lonk.result.*
+import dev.komu.lonk.result.ResultRow
+import dev.komu.lonk.result.ResultRowCollector
+import dev.komu.lonk.result.ResultRowMapper
+import dev.komu.lonk.result.get
 import dev.komu.lonk.testutils.DatabaseProvider.POSTGRESQL
 import dev.komu.lonk.testutils.DatabaseTest
 import dev.komu.lonk.testutils.transactionalTest
@@ -25,7 +28,6 @@ internal class DbConnectionTest(private val db: DbConnectionProvider) {
         assertEquals(42.0, db.query("values (42.0)").findUnique<Double>())
         assertEquals("foo", db.query("values ('foo')").findUnique<String>())
         assertEquals(true, db.query("values (true)").findUnique<Boolean>())
-        assertNull(db.query("values (cast(null as boolean))").findUniqueNullable<Boolean>())
     }
 
     @Test
@@ -61,38 +63,21 @@ internal class DbConnectionTest(private val db: DbConnectionProvider) {
 
     @Test
     fun `findUnique non-unique result`() = transactionalTest(db) { db ->
-        assertFailsWith<NonUniqueResultException> {
+        assertFailsWith<UnexpectedResultException> {
             db.query("VALUES (1), (2)").findUnique<Int>()
         }
     }
 
     @Test
     fun `findUnique empty result`() = transactionalTest(db) { db ->
-        assertFailsWith<EmptyResultException> {
+        assertFailsWith<UnexpectedResultException> {
             db.query("SELECT * FROM (VALUES (1)) n WHERE FALSE").findUnique<Int>()
-        }
-    }
-
-    @Test
-    fun `findUniqueOrNull single result`() = transactionalTest(db) { db ->
-        assertEquals(42, db.query("values (42)").findUniqueNullable<Int>())
-    }
-
-    @Test
-    fun `findNullableUnique non-unique result`() = transactionalTest(db) { db ->
-        assertFailsWith<NonUniqueResultException> {
-            db.query("values (1), (2)").findUniqueNullable<Int>()
         }
     }
 
     @Test
     fun `findOptional empty result`() = transactionalTest(db) { db ->
         assertNull(db.query("select * from (values (1)) n where false").findOptional<Int>())
-    }
-
-    @Test
-    fun `findUniqueNullable null result`() = transactionalTest(db) { db ->
-        assertNull(db.query("values (cast (null as int))").findUniqueNullable<Int>())
     }
 
     @Test

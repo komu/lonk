@@ -43,7 +43,7 @@ internal class DbConnectionCancellationTest(private val provider: DbConnectionPr
         coroutineScope {
             val job = launch {
                 try {
-                    provider.withConnection { db ->
+                    provider.withConnection(autoCommit = true) { db ->
                         db.sleepInDatabase()
                     }
                 } catch (e: Throwable) {

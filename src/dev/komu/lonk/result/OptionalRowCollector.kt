@@ -1,6 +1,6 @@
 package dev.komu.lonk.result
 
-import dev.komu.lonk.NonUniqueResultException
+import dev.komu.lonk.UnexpectedResultException
 
 internal class OptionalRowCollector<T>(private val rowMapper: ResultRowMapper<T>) : ResultRowCollector<T?> {
 
@@ -8,7 +8,7 @@ internal class OptionalRowCollector<T>(private val rowMapper: ResultRowMapper<T>
     private var got = false
 
     override fun accumulate(row: ResultRow): Boolean {
-        if (got) throw NonUniqueResultException()
+        if (got) throw UnexpectedResultException("Expected at most one result but received more than one row")
         result = rowMapper(row)
         got = true
 

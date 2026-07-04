@@ -40,3 +40,7 @@ public interface ResultRow {
 public inline fun <reified T> ResultRow.get(index: Int): T =
     get(index) as T
 
+/** Returns the value of the column named [name], cast to [T]. */
+public inline fun <reified T> ResultRow.get(name: String): T =
+    get(name) as T
+

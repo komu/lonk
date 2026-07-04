@@ -44,8 +44,8 @@ public abstract class DbConnectionProvider internal constructor() {
      *
      * @see openConnection
      */
-    public suspend inline fun <T> withConnection(callback: suspend (DbConnection) -> T): T {
-        val connection = openConnection(autoCommit = false)
+    public suspend inline fun <T> withConnection(autoCommit: Boolean, callback: suspend (DbConnection) -> T): T {
+        val connection = openConnection(autoCommit = autoCommit)
         try {
             return callback(connection)
         } finally {

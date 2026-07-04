@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "docs",
+      "runtimeExecutable": "website/serve.sh",
+      "runtimeArgs": [],
+      "port": 8001
+    }
+  ]
+}

@@ -5,7 +5,7 @@ import kotlin.reflect.KFunction
 
 internal class ConstructorInstantiator<T : Any>(
     private val ctor: KFunction<T>,
-    private val conversions: List<TypeConversion>,
+    private val conversions: List<TypeConversion<*, *>>,
 ) : Instantiator<T> {
 
     init {
@@ -13,7 +13,7 @@ internal class ConstructorInstantiator<T : Any>(
     }
 
     override fun instantiate(arguments: List<*>): T {
-        val args = Array(conversions.size) { i -> conversions[i](arguments[i]) }
+        val args = Array(conversions.size) { i -> conversions[i].convertUnsafe(arguments[i]) }
         return ctor.call(*args)
     }
 }

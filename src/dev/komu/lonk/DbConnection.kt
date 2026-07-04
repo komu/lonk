@@ -91,14 +91,6 @@ public abstract class DbConnection internal constructor(
         public suspend inline fun <reified T : Any> findOptional(): T? =
             findOptional(T::class)
 
-        /** Executes the query, requiring exactly one row, and instantiates it as [cl], allowing the result itself to be `null`. */
-        public suspend fun <T : Any> findUniqueNullable(cl: KClass<T>): T? =
-            collect(UniqueRowCollector(SingleNullableColumnInstantiatorRowMapper(cl, c.instantiatorProvider)))
-
-        /** Executes the query, requiring exactly one row, and instantiates it as [T], allowing the result itself to be `null`. */
-        public suspend inline fun <reified T : Any> findUniqueNullable(): T? =
-            findUniqueNullable(T::class)
-
         /** Executes the given query and processes the results with the given [collector] */
         public suspend fun <T> collect(collector: ResultRowCollector<T>): T =
             c.executeQuery(query, collector)

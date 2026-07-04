@@ -23,10 +23,10 @@ internal class DefaultTypeConversionRegistry : ConversionsConfigurer {
         registerConversionToDatabase(enumType, keyFunction)
     }
 
-    fun findConversionFromDbValue(source: KClass<*>, target: KClass<*>): TypeConversion? =
+    fun <S : Any, T : Any> findConversionFromDbValue(source: KClass<S>, target: KClass<T>): TypeConversion<S, T>? =
         loadConversions.findConversion(source, target)
 
-    fun findConversionToDb(type: KClass<*>): TypeConversion? =
+    fun <S : Any> findConversionToDb(type: KClass<S>): TypeConversion<S, *>? =
         storeConversions.findConversion(type, Any::class)
 
     override fun <S : Any, T : Any> registerConversionFromDatabase(
@@ -34,10 +34,10 @@ internal class DefaultTypeConversionRegistry : ConversionsConfigurer {
         target: KClass<T>,
         conversion: (S) -> T
     ) {
-        loadConversions.register(source, target, TypeConversion.fromNonNullFunction { conversion(it as S) })
+        loadConversions.register(source, target, TypeConversion(conversion))
     }
 
     override fun <S : Any> registerConversionToDatabase(source: KClass<S>, conversion: (S) -> Any) {
-        storeConversions.register(source, Any::class, TypeConversion.fromNonNullFunction { conversion(it as S) })
+        storeConversions.register(source, Any::class, TypeConversion(conversion))
     }
 }

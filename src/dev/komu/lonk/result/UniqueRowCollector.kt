@@ -1,14 +1,13 @@
 package dev.komu.lonk.result
 
-import dev.komu.lonk.EmptyResultException
-import dev.komu.lonk.NonUniqueResultException
+import dev.komu.lonk.UnexpectedResultException
 
 internal class UniqueRowCollector<T>(private val rowMapper: ResultRowMapper<T>) : ResultRowCollector<T> {
     private var result: T? = null
     private var got = false
 
     override fun accumulate(row: ResultRow): Boolean {
-        if (got) throw NonUniqueResultException()
+        if (got) throw UnexpectedResultException("Expected unique result but received more than one row")
         result = rowMapper(row)
         got = true
 
@@ -20,5 +19,6 @@ internal class UniqueRowCollector<T>(private val rowMapper: ResultRowMapper<T>) 
         get() = 2
 
     @Suppress("UNCHECKED_CAST")
-    override fun finish() = if (got) result as T else throw EmptyResultException()
+    override fun finish() =
+        if (got) result as T else throw UnexpectedResultException("Expected unique result, but got no rows")
 }

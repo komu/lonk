@@ -10,6 +10,7 @@ import java.lang.reflect.Modifier.isPublic
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.KVisibility
+import kotlin.reflect.cast
 import kotlin.reflect.full.companionObject
 import kotlin.reflect.full.companionObjectInstance
 import kotlin.reflect.full.declaredMemberFunctions
@@ -26,7 +27,7 @@ internal class InstantiatorProvider(private val typeConversionRegistry: DefaultT
 
         val conversion = typeConversionRegistry.findConversionToDb(value::class)
         return when {
-            conversion != null -> conversion(value)
+            conversion != null -> conversion.convertUnsafe(value)
             value is Enum<*> -> value.name
             else -> value
         }
@@ -37,11 +38,11 @@ internal class InstantiatorProvider(private val typeConversionRegistry: DefaultT
         if (types.size == 1) {
             val conversion = findConversionFromDbValue(types.single(), type)
             if (conversion != null)
-                return ImmediateSingleValueInstantiator(type, conversion)
+                return ImmediateSingleValueInstantiator(conversion.unsafeCast())
         }
 
         if (types.size == 1 && type.isValue)
-            return ImmediateSingleValueInstantiator(type, TypeConversion.identity)
+            return ImmediateSingleValueInstantiator(TypeConversion.identity<T>().unsafeCast())
 
         val instantiator = findExplicitInstantiatorFor(type, types)
         if (instantiator != null)
@@ -113,7 +114,10 @@ internal class InstantiatorProvider(private val typeConversionRegistry: DefaultT
      * Returns the list of conversions that need to be performed to convert
      * from sourceTypes to targetTypes, or `null` if conversions can't be done.
      */
-    private fun resolveConversions(sourceTypes: List<KClass<*>>, targetTypes: List<KClass<*>>): List<TypeConversion>? {
+    private fun resolveConversions(
+        sourceTypes: List<KClass<*>>,
+        targetTypes: List<KClass<*>>
+    ): List<TypeConversion<*, *>>? {
         require(targetTypes.size == sourceTypes.size)
 
         return List(targetTypes.size) { i ->
@@ -124,22 +128,22 @@ internal class InstantiatorProvider(private val typeConversionRegistry: DefaultT
     /**
      * Returns conversion for converting value of source to target, or returns null if there's no such conversion.
      */
-    private fun findConversionFromDbValue(source: KClass<*>, target: KClass<*>): TypeConversion? {
+    private fun <S : Any, T : Any> findConversionFromDbValue(
+        source: KClass<S>,
+        target: KClass<T>
+    ): TypeConversion<S, T>? {
         if (isAssignable(target, source))
-            return TypeConversion.identity
+            return TypeConversion.identity<S>().unsafeCast()
 
         return typeConversionRegistry.findConversionFromDbValue(source, target)
-            ?: findEnumConversion(target)
+            ?: findEnumConversion(target)?.unsafeCast()
     }
 
-    private fun findEnumConversion(target: KClass<*>): TypeConversion? {
+    private fun <T : Any> findEnumConversion(target: KClass<T>): TypeConversion<Any, T>? {
         if (isEnum(target.java)) {
             val cl = rawType(target.java).java.asSubclass(Enum::class.java)
-            return TypeConversion.fromNonNullFunction { value ->
-                java.lang.Enum.valueOf(
-                    cl,
-                    value.toString()
-                )
+            return TypeConversion { value ->
+                target.cast(java.lang.Enum.valueOf(cl, value.toString()))
             }
         }
 

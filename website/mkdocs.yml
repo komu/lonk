@@ -1,0 +1,57 @@
+site_name: Lonk
+site_url: https://komu.github.io/lonk/
+site_description: A simple database library for non-blocking Kotlin
+repo_url: https://github.com/komu/lonk
+repo_name: komu/lonk
+
+docs_dir: docs
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - smarty
+  - admonition
+  - pymdownx.details
+  - tables
+  - attr_list
+  - footnotes
+
+nav:
+  - Home: index.md
+  - Basic Usage: basic-usage.md
+  - Transactions: transactions.md
+  - Type Conversions: type-conversions.md
+  - Miscellaneous: miscellaneous.md
+  - More Examples: more-examples.md
+  - Downloading: downloading.md

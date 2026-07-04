@@ -23,8 +23,8 @@ settings:
     signArtifacts: true
     publishSources: true
     pom:
-      url: https://github.com/EvidentSolutions/lonk
-      scm: https://github.com/EvidentSolutions/lonk.git
+      url: https://github.com/komu/lonk
+      scm: https://github.com/komu/lonk.git
       developers:
         - name: Juha Komulainen
       licenses:

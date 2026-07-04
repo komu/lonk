@@ -5,6 +5,10 @@ provides a thin layer over both: you write plain SQL, and Lonk maps the results 
 Kotlin reflection, with no annotations or generated code required. Every operation is a suspend function, so it
 composes naturally with coroutines.
 
+```
+dev.komu.lonk:lonk:<VERSION>
+```
+
 ## Quick example
 
 ```kotlin

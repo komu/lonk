@@ -6,7 +6,8 @@ SQL, and Lonk maps the results onto your own classes using Kotlin reflection, wi
 code required. Every operation is a suspend function, so it composes naturally with coroutines.
 
 !!! warning
-Lonk has not had a stable release yet. The API may still change until then.
+Lonk is in early development. Releases before 1.0 may introduce breaking changes -- check the
+[release notes](https://github.com/komu/lonk/releases) before upgrading.
 
 - **GitHub**: [https://github.com/komu/lonk](https://github.com/komu/lonk)
 

@@ -1,34 +1,13 @@
 ## Downloading
 
 !!! warning
-Lonk has not yet had a stable release. Until then, there's no published artifact on Maven Central and the API
-may change without notice.
+Lonk is in early development. Releases before 1.0 may introduce breaking changes -- check the
+[release notes](https://github.com/komu/lonk/releases) before upgrading.
 
-Once published, the artifact will be available on Maven Central as `dev.komu.lonk:lonk`:
+Lonk is available on Maven Central:
 
-### Gradle
-
-```kotlin
-repositories {
-    mavenCentral()
-}
-
-dependencies {
-    implementation("dev.komu.lonk:lonk:<VERSION>")
-}
+```
+dev.komu.lonk:lonk:<VERSION>
 ```
 
-### Maven
-
-```xml
-
-<dependency>
-    <groupId>dev.komu.lonk</groupId>
-    <artifactId>lonk</artifactId>
-    <version>
-        <VERSION>
-    </version>
-</dependency>
-```
-
-Replace `<VERSION>` with the latest published version.
+Check [Maven Central](https://central.sonatype.com/artifact/dev.komu.lonk/lonk) for the latest version.

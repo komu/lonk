@@ -1,5 +1,6 @@
 package dev.komu.lonk
 
+import dev.komu.lonk.conversions.ByteArrayConversions
 import dev.komu.lonk.testutils.DatabaseProvider.POSTGRESQL
 import dev.komu.lonk.testutils.DatabaseTest
 import dev.komu.lonk.testutils.transactionalTest
@@ -7,7 +8,7 @@ import org.junit.jupiter.api.Assertions.assertArrayEquals
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-@DatabaseTest(POSTGRESQL)
+@DatabaseTest(POSTGRESQL, conversions = [ByteArrayConversions::class])
 internal class DbConnectionLargeObjectsTest(private val db: DbConnectionProvider) {
 
     @Test

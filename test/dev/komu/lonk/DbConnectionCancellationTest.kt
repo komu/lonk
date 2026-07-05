@@ -1,11 +1,12 @@
 package dev.komu.lonk
 
+import dev.komu.lonk.adapter.jdbc.JdbcConnectionProvider
 import dev.komu.lonk.testutils.DatabaseProvider.POSTGRESQL
 import dev.komu.lonk.testutils.DatabaseTest
 import dev.komu.lonk.testutils.transactionalTest
 import kotlinx.coroutines.*
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.test.Test
 import kotlin.test.assertIs
@@ -17,8 +18,11 @@ import kotlin.time.measureTime
 @DatabaseTest(POSTGRESQL)
 internal class DbConnectionCancellationTest(private val provider: DbConnectionProvider) {
 
+    init {
+        assumeTrue(provider is JdbcConnectionProvider) { "Cancellation does not work in R2DBC PostgreSQL driver" }
+    }
+
     @Test
-    @Disabled("this fails with R2DBC")
     fun `findUnique cancellation stops the query on the server, not just locally`() {
         val elapsed = measureTime {
             runBlocking {

@@ -6,5 +6,5 @@ package dev.komu.lonk.instantiation
  * The instantiator contains all possible conversions needed and applies them to arguments.
  */
 internal interface Instantiator<T> {
-    fun instantiate(arguments: List<*>): T
+    fun instantiate(args: List<*>): T
 }

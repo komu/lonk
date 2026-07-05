@@ -1,7 +1,7 @@
 package dev.komu.lonk.adapter.jdbc
 
 import dev.komu.lonk.DbConnectionProvider
-import dev.komu.lonk.conversion.*
+import dev.komu.lonk.conversion.TypeConversionsConfigurer
 import dev.komu.lonk.instantiation.InstantiatorProvider
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -15,9 +15,9 @@ import javax.sql.DataSource
 public class JdbcConnectionProvider internal constructor(
     private val dataSource: DataSource,
     config: Configuration,
-    typeConversionRegistry: DefaultTypeConversionRegistry,
 ) : DbConnectionProvider() {
 
+    private val typeConversionRegistry = config.typeConversions.build()
     private val dispatcher = config.dispatcher
     private val instantiatorProvider = InstantiatorProvider(typeConversionRegistry)
 
@@ -42,21 +42,19 @@ public class JdbcConnectionProvider internal constructor(
             dataSource: DataSource,
             configurer: Configuration.() -> Unit = {}
         ): JdbcConnectionProvider {
-            val typeConversionRegistry = DefaultTypeConversionRegistry()
-            val config = Configuration(typeConversionRegistry)
-
-            typeConversionRegistry.register(NumberConversions)
-            typeConversionRegistry.register(JavaTimeConversions)
-            typeConversionRegistry.register(LobConversions)
+            val config = Configuration()
 
             configurer(config)
 
-            return JdbcConnectionProvider(dataSource, config, typeConversionRegistry)
+            return JdbcConnectionProvider(dataSource, config)
         }
     }
 
     /** Configuration options for a [JdbcConnectionProvider]. */
-    public class Configuration(private val typeConversions: ConversionsConfigurer) {
+    public class Configuration internal constructor() {
+
+        internal val typeConversions = TypeConversionsConfigurer()
+
         /**
          * CoroutineDispatcher to use for dispatching the database calls.
          *
@@ -66,7 +64,7 @@ public class JdbcConnectionProvider internal constructor(
         public var dispatcher: CoroutineDispatcher = Dispatchers.IO
 
         /** Callback for registering custom type conversions. */
-        public fun conversions(block: ConversionsConfigurer.() -> Unit) {
+        public fun conversions(block: TypeConversionsConfigurer.() -> Unit) {
             block(typeConversions)
         }
     }

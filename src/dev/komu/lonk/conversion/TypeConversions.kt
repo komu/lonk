@@ -2,7 +2,11 @@ package dev.komu.lonk.conversion
 
 /**
  * A collection of type conversions.
+ *
+ * Can be implemented to install a set of related type conversions together easily.
  */
 public interface TypeConversions {
-    public fun register(registry: ConversionsConfigurer)
+
+    /** Called to register the type conversions onto the given registry. */
+    public fun registerOn(registry: TypeConversionsConfigurer)
 }

@@ -4,7 +4,7 @@
 
 Normally, Lonk will automatically detect the best way to instantiate your classes based on database results. If a
 class has multiple constructors, this can be ambiguous. If you wish to be more explicit, annotate your preferred
-constructor --- or a companion object function that returns an instance of the class --- with `@LonkInstantiator`.
+constructor --- or a companion object function that returns an instance of the class --- with `@DbInstantiator`.
 This causes Lonk to ignore all other constructors. It is an error to annotate more than one constructor or
 function this way.
 

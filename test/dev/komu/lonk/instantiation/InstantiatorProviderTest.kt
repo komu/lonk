@@ -1,15 +1,16 @@
 package dev.komu.lonk.instantiation
 
+import dev.komu.lonk.DbInstantiator
 import dev.komu.lonk.InstantiationFailureException
-import dev.komu.lonk.conversion.DefaultTypeConversionRegistry
+import dev.komu.lonk.conversion.TypeConversionsConfigurer
 import dev.komu.lonk.instantiation.test.InaccessibleClassRef
-import dev.komu.lonk.utils.TypeUtils
 import kotlin.reflect.KClass
+import kotlin.reflect.full.isSubclassOf
 import kotlin.test.*
 
 internal class InstantiatorProviderTest {
 
-    private val instantiatorProvider = InstantiatorProvider(DefaultTypeConversionRegistry())
+    private val instantiatorProvider = InstantiatorProvider(TypeConversionsConfigurer().build())
 
     @Test
     fun `every class is assignable from itself`() {
@@ -104,6 +105,61 @@ internal class InstantiatorProviderTest {
         assertEquals("instantiator called: foo", result.value)
     }
 
+    @Test
+    fun `find instantiator uses registered conversion for single argument`() {
+        val provider = InstantiatorProvider(TypeConversionsConfigurer().apply {
+            registerConversionFromDb<Int, TestValueType> { TestValueType(it) }
+        }.build())
+
+        val instantiator = provider.findInstantiator(TestValueType::class, listOf(Int::class))
+
+        assertEquals(TestValueType(42), instantiator.instantiate(listOf(42)))
+    }
+
+    @Test
+    fun `find instantiator converts string to enum by name`() {
+        val instantiator = instantiatorProvider.findInstantiator(Color::class, listOf(String::class))
+
+        assertEquals(Color.BLUE, instantiator.instantiate(listOf("BLUE")))
+    }
+
+    @Test
+    fun `find instantiator throws for unknown enum constant`() {
+        val instantiator = instantiatorProvider.findInstantiator(Color::class, listOf(String::class))
+
+        assertFailsWith<InstantiationFailureException> {
+            instantiator.instantiate(listOf("PURPLE"))
+        }
+    }
+
+    @Test
+    fun `valueToDatabase returns null for null`() {
+        assertNull(instantiatorProvider.valueToDatabase(null))
+    }
+
+    @Test
+    fun `valueToDatabase returns enum name for enum values without registered conversion`() {
+        assertEquals("BLUE", instantiatorProvider.valueToDatabase(Color.BLUE))
+    }
+
+    @Test
+    fun `valueToDatabase returns value unchanged when no conversion applies`() {
+        assertEquals("foo", instantiatorProvider.valueToDatabase("foo"))
+    }
+
+    @Test
+    fun `valueToDatabase applies registered conversion`() {
+        val provider = InstantiatorProvider(TypeConversionsConfigurer().apply {
+            registerConversionToDb<TestValueType, Int> { it.value }
+        }.build())
+
+        assertEquals(42, provider.valueToDatabase(TestValueType(42)))
+    }
+
+    data class TestValueType(val value: Int)
+
+    enum class Color { RED, BLUE }
+
     @Suppress("unused", "UNUSED_PARAMETER")
     class TestClass {
         val calledConstructor: Int
@@ -137,7 +193,7 @@ internal class InstantiatorProviderTest {
             this.publicField = publicField
         }
 
-        @LonkInstantiator
+        @DbInstantiator
         constructor(wrongType: Int) {
             this.publicField = wrongType.toString()
         }
@@ -146,17 +202,17 @@ internal class InstantiatorProviderTest {
     class TestClassWithStaticInstantiator(val value: String) {
 
         companion object {
-            @LonkInstantiator
+            @DbInstantiator
             fun instantiator(value: String) =
                 TestClassWithStaticInstantiator("instantiator called: $value")
         }
     }
 
     class TestClassWithMultipleExplicitConstructors {
-        @LonkInstantiator
+        @DbInstantiator
         constructor()
 
-        @LonkInstantiator
+        @DbInstantiator
         constructor(@Suppress("UNUSED_PARAMETER") foo: String)
     }
 
@@ -169,7 +225,7 @@ internal class InstantiatorProviderTest {
     }
 
     private fun assertAssignable(target: KClass<*>, source: KClass<*>) {
-        assertTrue(TypeUtils.isAssignable(target, source))
+        assertTrue(source.isSubclassOf(target))
     }
 
     class InaccessibleConstructor private constructor(@Suppress("UNUSED_PARAMETER") x: Int)

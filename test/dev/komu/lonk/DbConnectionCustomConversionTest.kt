@@ -1,57 +1,38 @@
 package dev.komu.lonk
 
-import dev.komu.lonk.adapter.jdbc.JdbcConnectionProvider
-import dev.komu.lonk.conversion.registerConversionFromDatabase
-import dev.komu.lonk.conversion.registerConversionToDatabase
+import dev.komu.lonk.conversion.TypeConversions
+import dev.komu.lonk.conversion.TypeConversionsConfigurer
 import dev.komu.lonk.testutils.DatabaseProvider.POSTGRESQL
 import dev.komu.lonk.testutils.DatabaseTest
 import dev.komu.lonk.testutils.transactionalTest
-import javax.sql.DataSource
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-@DatabaseTest(POSTGRESQL)
-internal class DbConnectionCustomConversionTest(private val ds: DataSource) {
+@DatabaseTest(POSTGRESQL, conversions = [DbConnectionCustomConversionTest.EmailConversions::class])
+internal class DbConnectionCustomConversionTest(private val db: DbConnectionProvider) {
 
     @Test
-    fun `custom load conversions`() {
-        val db = JdbcConnectionProvider(ds) {
-            conversions {
-                registerConversionFromDatabase(EmailAddress::parse)
-            }
-        }
-
-        transactionalTest(db) { db ->
-            assertEquals(
-                EmailAddress("user", "example.org"),
-                db.query("values ('user@example.org')").findUnique<EmailAddress>()
-            )
-        }
+    fun `custom load conversions`() = transactionalTest(db) { db ->
+        assertEquals(
+            EmailAddress("user", "example.org"),
+            db.query("values ('user@example.org')").findUnique<EmailAddress>()
+        )
     }
 
     @Test
-    fun `custom save conversions`() {
-        val db = JdbcConnectionProvider(ds) {
-            conversions {
-                registerConversionToDatabase(EmailAddress::toString)
-            }
-        }
+    fun `custom save conversions`() = transactionalTest(db) { db ->
+        db.update("drop table if exists custom_save_conversions_test")
+        db.update("create temporary table custom_save_conversions_test (email varchar(32))")
 
-        transactionalTest(db) { db ->
+        db.update(
+            "insert into custom_save_conversions_test (email) values (?)",
+            EmailAddress("user", "example.org")
+        )
 
-            db.update("drop table if exists custom_save_conversions_test")
-            db.update("create temporary table custom_save_conversions_test (email varchar(32))")
-
-            db.update(
-                "insert into custom_save_conversions_test (email) values (?)",
-                EmailAddress("user", "example.org")
-            )
-
-            assertEquals(
-                "user@example.org",
-                db.query("select email from custom_save_conversions_test").findUnique<String>()
-            )
-        }
+        assertEquals(
+            "user@example.org",
+            db.query("select email from custom_save_conversions_test").findUnique<String>()
+        )
     }
 
     data class EmailAddress(private val user: String, private val host: String) {
@@ -68,6 +49,12 @@ internal class DbConnectionCustomConversionTest(private val ds: DataSource) {
                     return EmailAddress(parts[0], parts[1])
                 throw IllegalArgumentException("invalid address: '$value'")
             }
+        }
+    }
+
+    internal object EmailConversions : TypeConversions {
+        override fun registerOn(registry: TypeConversionsConfigurer) {
+            registry.registerConversions(EmailAddress::parse, EmailAddress::toString)
         }
     }
 }

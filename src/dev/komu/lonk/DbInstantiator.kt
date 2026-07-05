@@ -1,4 +1,4 @@
-package dev.komu.lonk.instantiation
+package dev.komu.lonk
 
 /**
  * Marks a constructor or a static method as Lonk instantiator. This means that when Lonk tries to
@@ -10,4 +10,4 @@ package dev.komu.lonk.instantiation
 @Retention(AnnotationRetention.RUNTIME)
 @MustBeDocumented
 @Target(AnnotationTarget.CONSTRUCTOR, AnnotationTarget.FUNCTION)
-public annotation class LonkInstantiator
+public annotation class DbInstantiator

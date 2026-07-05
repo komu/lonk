@@ -1,6 +1,7 @@
 package dev.komu.lonk.instantiation
 
 import dev.komu.lonk.conversion.TypeConversion
+import dev.komu.lonk.conversion.convertUnknownWith
 import kotlin.reflect.KFunction
 
 internal class ConstructorInstantiator<T : Any>(
@@ -12,8 +13,8 @@ internal class ConstructorInstantiator<T : Any>(
         require(ctor.parameters.size == conversions.size) { "ctor.parameters.size (${ctor.parameters.size}) != conversions.size (${conversions.size})" }
     }
 
-    override fun instantiate(arguments: List<*>): T {
-        val args = Array(conversions.size) { i -> conversions[i].convertUnsafe(arguments[i]) }
-        return ctor.call(*args)
+    override fun instantiate(args: List<*>): T {
+        val converted = Array(conversions.size) { i -> args[i]?.convertUnknownWith(conversions[i]) }
+        return ctor.call(*converted)
     }
 }

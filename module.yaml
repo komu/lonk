@@ -33,16 +33,18 @@ settings:
 
 dependencies:
   - $kotlin.reflect
-  - $libs.kotlinx.coroutines
-  - $libs.jdbc.postgresql: compile-only
-  - $libs.jetbrains.annotations: compile-only
-  - $libs.r2dbc.postgresql: compile-only
+  - $libs.kotlinx.coroutines.core
   - $libs.kotlinx.coroutines.reactive
+  - $libs.kotlinx.datetime: compile-only
+  - $libs.jetbrains.annotations: compile-only
+  - $libs.jdbc.postgresql: compile-only
+  - $libs.r2dbc.postgresql: compile-only
 
 test-dependencies:
   - $libs.junit.jupiter.api
   - $libs.junit.jupiter.params
   - $libs.jdbc.hsqldb
   - $libs.jdbc.postgresql
+  - $libs.kotlinx.datetime
   - $libs.testcontainers.postgresql
   - $libs.r2dbc.postgresql

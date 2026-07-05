@@ -1,33 +1,30 @@
 package dev.komu.lonk.instantiation
 
+import dev.komu.lonk.DbInstantiator
 import dev.komu.lonk.InstantiationFailureException
-import dev.komu.lonk.conversion.DefaultTypeConversionRegistry
 import dev.komu.lonk.conversion.TypeConversion
-import dev.komu.lonk.utils.TypeUtils.isAssignable
-import dev.komu.lonk.utils.TypeUtils.isEnum
-import dev.komu.lonk.utils.TypeUtils.rawType
+import dev.komu.lonk.conversion.TypeConversionRegistry
+import dev.komu.lonk.conversion.convertUnknownWith
+import dev.komu.lonk.utils.asEnumProviderOrNull
+import dev.komu.lonk.utils.rawType
 import java.lang.reflect.Modifier.isPublic
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.KVisibility
-import kotlin.reflect.cast
-import kotlin.reflect.full.companionObject
-import kotlin.reflect.full.companionObjectInstance
-import kotlin.reflect.full.declaredMemberFunctions
-import kotlin.reflect.full.hasAnnotation
+import kotlin.reflect.full.*
 import kotlin.reflect.jvm.jvmName
 
 /**
  * Provides [Instantiator]s for classes.
  */
-internal class InstantiatorProvider(private val typeConversionRegistry: DefaultTypeConversionRegistry) {
+internal class InstantiatorProvider(private val typeConversionRegistry: TypeConversionRegistry) {
 
     fun valueToDatabase(value: Any?): Any? {
         if (value == null) return null
 
         val conversion = typeConversionRegistry.findConversionToDb(value::class)
         return when {
-            conversion != null -> conversion.convertUnsafe(value)
+            conversion != null -> value.convertUnknownWith(conversion)
             value is Enum<*> -> value.name
             else -> value
         }
@@ -36,20 +33,17 @@ internal class InstantiatorProvider(private val typeConversionRegistry: DefaultT
     fun <T : Any> findInstantiator(type: KClass<T>, types: List<KClass<*>>): Instantiator<T> {
         // First, check if we have an immediate conversion registered. If so, we'll just use that.
         if (types.size == 1) {
-            val conversion = findConversionFromDbValue(types.single(), type)
+            val conversion = findConversionFromDbValue(types[0], type)
             if (conversion != null)
-                return ImmediateSingleValueInstantiator(conversion.unsafeCast())
+                return ImmediateSingleValueInstantiator(conversion)
         }
-
-        if (types.size == 1 && type.isValue)
-            return ImmediateSingleValueInstantiator(TypeConversion.identity<T>().unsafeCast())
 
         val instantiator = findExplicitInstantiatorFor(type, types)
         if (instantiator != null)
             return instantiator
 
         if (!isPublic(type.java.modifiers))
-            throw InstantiationFailureException("$type can't be instantiated reflectively because it is not public or missing a @LonkInstantiator-annotation");
+            throw InstantiationFailureException("$type can't be instantiated reflectively because it is not public or missing a @DbInstantiator-annotation");
 
         return type.constructors
             .firstNotNullOfOrNull { implicitInstantiatorFrom(it, types) }
@@ -57,18 +51,18 @@ internal class InstantiatorProvider(private val typeConversionRegistry: DefaultT
     }
 
     private fun <T : Any> findExplicitInstantiatorFor(cl: KClass<T>, types: List<KClass<*>>): Instantiator<T>? {
-        val constructors = cl.constructors.filter { it.hasAnnotation<LonkInstantiator>() }
+        val constructors = cl.constructors.filter { it.hasAnnotation<DbInstantiator>() }
         val methods =
-            cl.companionObject?.declaredMemberFunctions?.filter { it.hasAnnotation<LonkInstantiator>() }.orEmpty()
+            cl.companionObject?.declaredMemberFunctions?.filter { it.hasAnnotation<DbInstantiator>() }.orEmpty()
 
         val count = constructors.size + methods.size
         return when {
             count > 1 ->
-                throw InstantiationFailureException("only one constructor/method of $cl can be marked with @LonkInstantiator. Found $count")
+                throw InstantiationFailureException("only one constructor/method of $cl can be marked with @DbInstantiator. Found $count")
 
             constructors.size == 1 -> {
                 val ctor = constructors.first()
-                val parameterTypes = ctor.parameters.map { rawType(it.type) }
+                val parameterTypes = ctor.parameters.map { it.type.rawType }
 
                 resolveConversions(types, parameterTypes)
                     ?.let { ConstructorInstantiator(ctor, it) }
@@ -80,7 +74,7 @@ internal class InstantiatorProvider(private val typeConversionRegistry: DefaultT
                 if (method.returnType.classifier != cl)
                     throw InstantiationFailureException("Instantiator method ${method.name} does not return $cl but ${method.returnType}")
 
-                val parameterTypes = method.parameters.map { rawType(it.type) }
+                val parameterTypes = method.parameters.map { it.type.rawType }
                     .drop(1) // first parameter is the companion object
 
                 resolveConversions(types, parameterTypes)
@@ -104,7 +98,7 @@ internal class InstantiatorProvider(private val typeConversionRegistry: DefaultT
         if (ctor.parameters.size != types.size)
             return null
 
-        val conversions = resolveConversions(types, ctor.parameters.map { rawType(it.type) })
+        val conversions = resolveConversions(types, ctor.parameters.map { it.type.rawType })
             ?: return null
 
         return ConstructorInstantiator(ctor, conversions)
@@ -132,21 +126,19 @@ internal class InstantiatorProvider(private val typeConversionRegistry: DefaultT
         source: KClass<S>,
         target: KClass<T>
     ): TypeConversion<S, T>? {
-        if (isAssignable(target, source))
-            return TypeConversion.identity<S>().unsafeCast()
+        if (source.isSubclassOf(target))
+            return TypeConversion.identity(source).cast(source, target)
 
         return typeConversionRegistry.findConversionFromDbValue(source, target)
-            ?: findEnumConversion(target)?.unsafeCast()
+            ?: findEnumConversion(source, target)
     }
 
-    private fun <T : Any> findEnumConversion(target: KClass<T>): TypeConversion<Any, T>? {
-        if (isEnum(target.java)) {
-            val cl = rawType(target.java).java.asSubclass(Enum::class.java)
-            return TypeConversion { value ->
-                target.cast(java.lang.Enum.valueOf(cl, value.toString()))
+    private fun <S : Any, T : Any> findEnumConversion(source: KClass<S>, target: KClass<T>): TypeConversion<S, T>? =
+        if (source == String::class)
+            target.asEnumProviderOrNull()?.let { enumProvider ->
+                TypeConversion(String::class, target) { value -> enumProvider.findByName(value) }
+                    .cast(source, target)
             }
-        }
-
-        return null
-    }
+        else
+            return null
 }

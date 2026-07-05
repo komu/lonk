@@ -2,9 +2,6 @@ package dev.komu.lonk.result
 
 import kotlin.reflect.KClass
 
-/** A function that maps a [ResultRow] into a value of type [T]. */
-public typealias ResultRowMapper<T> = (ResultRow) -> T
-
 /** A single row of a query result. */
 public interface ResultRow {
 

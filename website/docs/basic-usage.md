@@ -107,8 +107,8 @@ class Department(val id: Int, val name: String)
 ```
 
 !!! note
-If a class has multiple constructors, Lonk needs to decide which one to use --- see
-[Explicit instantiators](miscellaneous.md#explicit-instantiators) if you need to control that.
+    If a class has multiple constructors, Lonk needs to decide which one to use --- see
+    [Explicit instantiators](miscellaneous.md#explicit-instantiators) if you need to control that.
 
 ### Fetching a single value
 

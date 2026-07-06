@@ -5,9 +5,9 @@ databases, but JDBC and R2DBC are painful to use directly. Lonk provides a thin 
 SQL, and Lonk maps the results onto your own classes using Kotlin reflection, with no annotations or generated
 code required. Every operation is a suspend function, so it composes naturally with coroutines.
 
-!!! warning
-Lonk is in early development. Releases before 1.0 may introduce breaking changes -- check the
-[release notes](https://github.com/komu/lonk/releases) before upgrading.
+!!! warning 
+    Lonk is in early development. Releases before 1.0 may introduce breaking changes -- check the
+    [release notes](https://github.com/komu/lonk/releases) before upgrading.
 
 - **GitHub**: [https://github.com/komu/lonk](https://github.com/komu/lonk)
 
